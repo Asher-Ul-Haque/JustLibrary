@@ -1,147 +1,183 @@
-#include <forgeUtils/core/asserts.h>
-#include <forgeUtils/core/logger.h>
-#include <forgeUtils/memory/objectPool.h>
-#include <forgeUtils/memory/tracker.h>
+#include <justUtils/core/asserts.h>
+#include <justUtils/core/logger.h>
+#include <justUtils/memory/objectPool.h>
+#include <justUtils/memory/tracker.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdalign.h>
 
-static inline uintptr_t alignUpPtr(uintptr_t PTR, uintptr_t ALIGNMENT)
+static inline bool objectPoolIsPowerOfTwo(size_t x)
 {
-  if (ALIGNMENT == 0) ALIGNMENT = DEFAULT_ALIGNMENT_BYTES;
-  FORGE_ASSERT_DEBUG_MESSAGE((ALIGNMENT & (ALIGNMENT - 1)) == 0, "[OBJECT POOL] : ALIGNMENT must be a power of 2");
-  return (PTR + (ALIGNMENT - 1)) & ~(ALIGNMENT - 1);
+  return (x != 0) && ((x & (x - 1)) == 0);
 }
 
-bool forgeObjectPoolCreate(
-  ForgeObjectPool*  POOL,
+bool justObjectPoolCreate(
+  justObjectPool*  POOL,
   size_t            CAPACITY,
   size_t            OBJECT_SIZE,
-  void*             MEMORY)
+  size_t            ALIGNMENT,
+  void*             USER_MEMORY,
+  const char*       TAG)
 {
-  FORGE_ASSERT_DEBUG_MESSAGE(POOL != NULL,        "[OBJECT POOL] : Cannot initialize a NULL ObjectPool pointer");
-  FORGE_ASSERT_DEBUG_MESSAGE(CAPACITY > 0,        "[OBJECT POOL] : CAPACITY must be at least 1");
-  FORGE_ASSERT_DEBUG_MESSAGE(OBJECT_SIZE > 0,     "[OBJECT POOL] : OBJECT_SIZE must be greater than 0");
+  JUST_ASSERT_DEBUG_MESSAGE(POOL != NULL,        "[OBJECT POOL] : Cannot initialize a NULL ObjectPool pointer");
+  JUST_ASSERT_DEBUG_MESSAGE(CAPACITY > 0,        "[OBJECT POOL] : CAPACITY must be at least 1");
+  JUST_ASSERT_DEBUG_MESSAGE(OBJECT_SIZE > 0,     "[OBJECT POOL] : OBJECT_SIZE must be greater than 0");
 
   POOL->capacity    = CAPACITY;
   POOL->objectSize  = OBJECT_SIZE;
-  POOL->ownsMemory  = (MEMORY == NULL);
+  POOL->ownsMemory  = (USER_MEMORY == NULL);
 
-  // - - - Pad object size to ensure every slot starts at 16-byte alignment boundary
-  size_t minSize  = (POOL->objectSize < sizeof(size_t)) ? sizeof(size_t) : POOL->objectSize;
-  POOL->stride    = alignUpPtr(minSize, DEFAULT_ALIGNMENT_BYTES);
+  if (ALIGNMENT == 0) ALIGNMENT = alignof(max_align_t); 
+  JUST_ASSERT_DEBUG_MESSAGE(objectPoolIsPowerOfTwo(ALIGNMENT), "[OBJECT POOL] : Alignment must be a power of 2");
 
-  if (POOL->objectSize < POOL->stride)
-  {
-    FORGE_LOG_WARNING("[OBJECT POOL] : Object size padded from %zu to %zu bytes for 16-byte CPU alignment.", POOL->objectSize, POOL->stride);
-  }
+  POOL->capacity   = CAPACITY;
+  POOL->objectSize = OBJECT_SIZE;
+  POOL->ownsMemory = (USER_MEMORY == NULL);
 
-  // - - - Allocate memory if needed
+  // - - - Stride must fit at least a free-list size_t offset and be aligned to requested alignment
+  size_t minSlotSize  = (OBJECT_SIZE < sizeof(size_t)) ? sizeof(size_t) : OBJECT_SIZE;
+  POOL->stride        = (minSlotSize + (ALIGNMENT - 1)) & ~(ALIGNMENT - 1);
+
+  size_t      totalBytes  = POOL->capacity * POOL->stride;
+  const char* allocTag    = (TAG && TAG[0] != '\0') ? TAG : "OBJECT_POOL";
+
   if (POOL->ownsMemory)
   {
-    POOL->memory = FORGE_MALLOC(POOL->capacity * POOL->stride);
+    POOL->memory = JUST_MALLOC_TAGGED(totalBytes, allocTag);
     if (!POOL->memory)
     {
-      FORGE_LOG_ERROR("[OBJECT POOL] : Failed to allocate memory buffer!");
+      JUST_LOG_FATAL("[OBJECT POOL] : Failed to allocate %zu bytes for POOL backing buffer", totalBytes);
       return false;
     }
   }
   else
   {
-    POOL->memory = MEMORY;
+    JUST_ASSERT_DEBUG_MESSAGE(((uintptr_t)USER_MEMORY & (ALIGNMENT - 1)) == 0,
+                               "[OBJECT POOL] : Provided userMemory is not aligned to requested boundary");
+    POOL->memory = USER_MEMORY;
   }
 
-  // - - - Initialize the linked list storing BYTE OFFSETS to next free slot
+  #ifdef DEBUG
+    if (!justBitsetCreate(&POOL->allocatedBits, CAPACITY, NULL, "OBJECT_POOL"))
+    {
+      if (POOL->ownsMemory) JUST_FREE(POOL->memory);
+      return false;
+    }
+  #endif
+
+  // - - - Wire singly linked free-list
   POOL->freeListOffset = 0;
-  POOL->freeCount      = POOL->capacity;
+  POOL->freeCount      = CAPACITY;
 
-  uintptr_t byteptr = (uintptr_t)POOL->memory;
-  for (size_t i = 0; i < POOL->capacity - 1; ++i)
+  uint8_t* bytePtr = (uint8_t*)POOL->memory;
+  for (size_t i = 0; i < CAPACITY - 1; ++i)
   {
-    size_t* nextOffsetSlot = (size_t*)(byteptr + (i * POOL->stride));
-    *nextOffsetSlot        = (i + 1) * POOL->stride; // Next slot BYTE OFFSET
+    size_t* nextSlot  = (size_t*)(bytePtr + (i * POOL->stride));
+    *nextSlot         = (i + 1) * POOL->stride;
   }
 
-  // - - - Last slot has special end-of-list marker
-  size_t* lastSlot = (size_t*)(byteptr + ((POOL->capacity - 1) * POOL->stride));
-  *lastSlot        = POOL_END_OF_LIST;
+  size_t* lastSlot  = (size_t*)(bytePtr + ((CAPACITY - 1) * POOL->stride));
+  *lastSlot         = JUST_POOL_END_OF_LIST;
 
   return true;
 }
 
-void forgeObjectPoolDestroy(ForgeObjectPool* POOL) 
+void justObjectPoolDestroy(justObjectPool* POOL) 
 {
-  FORGE_ASSERT_DEBUG_MESSAGE(POOL != NULL, "[OBJECT POOL] : Cannot destroy a NULL ObjectPool pointer");
+  JUST_ASSERT_DEBUG_MESSAGE(POOL != NULL, "[OBJECT POOL] : Cannot destroy a NULL ObjectPool pointer");
+
+  #ifdef DEBUG
+    justBitsetDestroy(&POOL->allocatedBits);
+  #endif
 
   if (POOL->ownsMemory && POOL->memory) 
   {
-    FORGE_FREE(POOL->memory);
-    POOL->memory = NULL;
+    JUST_FREE(POOL->memory);
   }
 
+  POOL->memory          = NULL;
   POOL->capacity        = 0;
   POOL->objectSize      = 0;
   POOL->stride          = 0;
-  POOL->freeListOffset  = POOL_END_OF_LIST;
+  POOL->freeListOffset  = JUST_POOL_END_OF_LIST;
   POOL->freeCount       = 0;
+  POOL->ownsMemory      = false;
 }
 
-void* forgeObjectPoolTakeObject(ForgeObjectPool* POOL) 
+void* justObjectPoolTakeObject(justObjectPool* POOL) 
 {
-  FORGE_ASSERT_DEBUG_MESSAGE(POOL != NULL, "[OBJECT POOL] : Cannot take from NULL pool");
-  FORGE_ASSERT_DEBUG_MESSAGE(POOL->memory != NULL, "[OBJECT POOL] : Pool memory is NULL, make sure pool is initialized");
+  JUST_ASSERT_DEBUG_MESSAGE(POOL != NULL, "[OBJECT POOL] : Cannot take from NULL pool");
+  JUST_ASSERT_DEBUG_MESSAGE(POOL->memory != NULL, "[OBJECT POOL] : Pool memory is NULL, make sure pool is initialized");
 
-  if (POOL->freeListOffset == POOL_END_OF_LIST) 
+  if (POOL->freeListOffset == JUST_POOL_END_OF_LIST) 
   {
-    FORGE_LOG_ERROR("[OBJECT POOL] : Out of objects!");
+    JUST_LOG_ERROR("[OBJECT POOL] : Out of objects!");
     return NULL;
   }
 
   // - - - Pop element from free list using byte offset
-  uintptr_t objectPtr = ((uintptr_t)POOL->memory) + POOL->freeListOffset;
-  POOL->freeListOffset = *(size_t*)objectPtr;
+  uintptr_t objAddr   = (uintptr_t)POOL->memory + POOL->freeListOffset;
+  size_t    slotIndex = POOL->freeListOffset / POOL->stride;
+
+  // - - - Pop head of free list
+  POOL->freeListOffset = *(size_t*)objAddr;
   POOL->freeCount--;
 
-  return (void*)objectPtr;
+  #ifdef DEBUG
+    JUST_ASSERT_DEBUG_MESSAGE(!justBitsetGet(&POOL->allocatedBits, slotIndex),
+                             "[OBJECT POOL] : Internal invariant failure: taking already allocated slot");
+    justBitsetSet(&POOL->allocatedBits, slotIndex);
+  #endif
+
+  return (void*)objAddr;
 }
 
-void forgeObjectPoolReturnObject(ForgeObjectPool* POOL, void* OBJECT) 
+void justObjectPoolReturnObject(justObjectPool* POOL, void* OBJECT) 
 {
-  FORGE_ASSERT_DEBUG_MESSAGE(POOL != NULL, "[OBJECT POOL] Cannot return object to NULL pool");
-  FORGE_ASSERT_DEBUG_MESSAGE(OBJECT != NULL, "[OBJECT POOL] Cannot return NULL object");
+  JUST_ASSERT_DEBUG_MESSAGE(POOL != NULL, "[OBJECT POOL] Cannot return object to NULL pool");
+  JUST_ASSERT_DEBUG_MESSAGE(OBJECT != NULL, "[OBJECT POOL] Cannot return NULL object");
 
-  uintptr_t objByte   = (uintptr_t)OBJECT;
-  uintptr_t memStart  = (uintptr_t)POOL->memory;
-  size_t    offset    = objByte - memStart;
+  uintptr_t objAddr     = (uintptr_t)OBJECT;
+  uintptr_t baseAddr    = (uintptr_t)POOL->memory;
+  size_t    byteOffset  = objAddr - baseAddr;
 
-  // - - - Bounds and Alignment Verification using STRIDE
-  FORGE_ASSERT_DEBUG_MESSAGE(objByte >= memStart && offset < (POOL->capacity * POOL->stride),
-                          "[OBJECT POOL] : Returned OBJECT pointer is out of bounds of this pool!");
-  FORGE_ASSERT_DEBUG_MESSAGE(offset % POOL->stride == 0,
-                          "[OBJECT POOL] : Returned OBJECT pointer is misaligned with pool stride!");
+  // - - - Verify bounds and alignment
+  JUST_ASSERT_DEBUG_MESSAGE(objAddr >= baseAddr && byteOffset < (POOL->capacity * POOL->stride),
+                             "[OBJECT POOL] : Returned pointer is outside pool boundary");
+  JUST_ASSERT_DEBUG_MESSAGE((byteOffset % POOL->stride) == 0,
+                             "[OBJECT POOL] : Returned pointer is misaligned with pool stride");
 
-  // - - - Push object back onto free list head
-  *(size_t*)OBJECT = POOL->freeListOffset;
-  POOL->freeListOffset = offset;
+  size_t slotIndex = byteOffset / POOL->stride;
+
+#ifdef DEBUG
+  JUST_ASSERT_DEBUG_MESSAGE(justBitsetGet(&POOL->allocatedBits, slotIndex),
+                             "[OBJECT POOL] : Double-free detected! Slot was not active or already returned");
+  justBitsetClear(&POOL->allocatedBits, slotIndex);
+#endif
+
+  // - - - Push back onto head of free list
+  *(size_t*)OBJECT      = POOL->freeListOffset;
+  POOL->freeListOffset  = byteOffset;
   POOL->freeCount++;
 }
 
-void forgeObjectPoolDebugPrint(ForgeObjectPool* POOL)
+void justObjectPoolDebugPrint(const justObjectPool* POOL)
 {
   #ifdef DEBUG
-    FORGE_ASSERT_DEBUG_MESSAGE(POOL != NULL, "[OBJECT POOL] Cannot visualize a NULL pool");
+    JUST_ASSERT_DEBUG_MESSAGE(POOL != NULL, "[OBJECT POOL] Cannot visualize a NULL pool");
 
     if (!POOL || POOL->capacity == 0) return;
 
-    bool* freeSlots = (bool*)FORGE_MALLOC(POOL->capacity * sizeof(bool));
+    bool* freeSlots = (bool*)JUST_MALLOC(POOL->capacity * sizeof(bool));
     if (!freeSlots) return;
     memset(freeSlots, 0, POOL->capacity * sizeof(bool));
 
-    char* bar = (char*)FORGE_MALLOC(POOL->capacity + 1);
+    char* bar = (char*)JUST_MALLOC(POOL->capacity + 1);
     if (!bar)
     {
-      FORGE_FREE(freeSlots);
+      JUST_FREE(freeSlots);
       return;
     }
 
@@ -149,19 +185,19 @@ void forgeObjectPoolDebugPrint(ForgeObjectPool* POOL)
     size_t curr_offset   = POOL->freeListOffset;
     size_t visited_count = 0;
 
-    while (curr_offset != POOL_END_OF_LIST)
+    while (curr_offset != JUST_POOL_END_OF_LIST)
     {
       size_t slot_index = curr_offset / POOL->stride;
 
       if (slot_index >= POOL->capacity || (curr_offset % POOL->stride != 0))
       {
-        FORGE_LOG_ERROR("[OBJECT POOL] : Pool is corrupted (invalid offset %zu)", curr_offset);
+        JUST_LOG_ERROR("[OBJECT POOL] : Pool is corrupted (invalid offset %zu)", curr_offset);
         break;
       }
 
       if (visited_count >= POOL->capacity || freeSlots[slot_index])
       {
-        FORGE_LOG_ERROR("[OBJECT POOL] : Cycle detected in free list!");
+        JUST_LOG_ERROR("[OBJECT POOL] : Cycle detected in free list!");
         break;
       }
 
@@ -173,7 +209,7 @@ void forgeObjectPoolDebugPrint(ForgeObjectPool* POOL)
     }
 
     // - - - - Build bar representation
-    size_t head_index = (POOL->freeListOffset != POOL_END_OF_LIST) ? (POOL->freeListOffset / POOL->stride) : POOL_END_OF_LIST;
+    size_t head_index = (POOL->freeListOffset != JUST_POOL_END_OF_LIST) ? (POOL->freeListOffset / POOL->stride) : JUST_POOL_END_OF_LIST;
     for (size_t i = 0; i < POOL->capacity; ++i)
     {
       if (i == head_index && freeSlots[i]) {
@@ -186,7 +222,7 @@ void forgeObjectPoolDebugPrint(ForgeObjectPool* POOL)
 
     const size_t used = POOL->capacity - POOL->freeCount;
 
-    FORGE_LOG_INFO(
+    JUST_LOG_INFO(
       "Pool [%s]\n"
       "Capacity : %zu\n"
       "Used     : %zu (%.1f%%)\n"
@@ -199,8 +235,8 @@ void forgeObjectPoolDebugPrint(ForgeObjectPool* POOL)
       POOL->capacity ? (100.0 * (double)POOL->freeCount) / (double)POOL->capacity : 0.0
     );
 
-    FORGE_FREE(bar);
-    FORGE_FREE(freeSlots);
+    JUST_FREE(bar);
+    JUST_FREE(freeSlots);
   #else 
     (void)POOL;
   #endif

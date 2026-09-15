@@ -1,78 +1,82 @@
-#include <forgeUtils/memory/linearAlloc.h>
-#include <forgeUtils/dataStructures/ringBuffer.h>
-#include <forgeUtils/core/asserts.h>
-#include <forgeUtils/core/logger.h>
-#include <forgeUtils/memory/tracker.h>
+#include <justUtils/dataStructures/ringBuffer.h>
+#include <justUtils/memory/tracker.h>
+#include <justUtils/core/asserts.h>
+#include <justUtils/core/logger.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <string.h>
 
-
-static inline size_t forgeRoundToPowerOfTwo(size_t VAL)
+static inline size_t justRingNextPowerOfTwo(size_t NUM)
 {
-  if (VAL < FORGE_RING_BUFFER_MIN_CAPACITY) return FORGE_RING_BUFFER_MIN_CAPACITY;
-  VAL--;
-  VAL |= VAL >> 1;
-  VAL |= VAL >> 2;
-  VAL |= VAL >> 4;
-  VAL |= VAL >> 8;
-  VAL |= VAL >> 16;
+  if (NUM <= 1) return 1;
+  NUM--;
+  NUM |= NUM >> 1;
+  NUM |= NUM >> 2;
+  NUM |= NUM >> 4;
+  NUM |= NUM >> 8;
+  NUM |= NUM >> 16;
 #if UINTPTR_MAX > 0xFFFFFFFF
-  VAL |= VAL >> 32;
+  NUM |= NUM >> 32;
 #endif
-  VAL++;
-  return VAL;
+  NUM++;
+  return NUM;
 }
 
-bool forgeRingBufferCreate(
-  ForgeRingBuffer*        RING,
-  size_t                  CAPACITY,
-  size_t                  ELEMENT_SIZE,
-  bool                    ALLOW_OVERWRITE,
-  ForgeLinearAllocator*   ALLOCATOR)
+JUST_API bool justRingBufferCreate(
+  JustRingBuffer*      RING,
+  size_t               CAPACITY,
+  size_t               ELEMENT_SIZE,
+  bool                 ALLOW_OVERWRITE,
+  justLinearAllocator* ALLOCATOR,
+  const char*          TAG)
 {
-  FORGE_ASSERT_DEBUG_MESSAGE(RING != NULL, "[RING BUFFER] : Target pointer cannot be NULL");
-  FORGE_ASSERT_DEBUG_MESSAGE(ELEMENT_SIZE > 0, "[RING BUFFER] : Element size must be greater than 0");
+  JUST_ASSERT_DEBUG_MESSAGE(RING != NULL, "[RING BUFFER] : Target pointer cannot be NULL");
+  JUST_ASSERT_DEBUG_MESSAGE(CAPACITY > 0, "[RING BUFFER] : CAPACITY must be > 0");
+  JUST_ASSERT_DEBUG_MESSAGE(ELEMENT_SIZE > 0, "[RING BUFFER] : Element size must be > 0");
 
-  RING->elementSize     = ELEMENT_SIZE;
-  RING->capacity        = forgeRoundToPowerOfTwo(CAPACITY);
-  RING->head            = 0;
-  RING->tail            = 0;
-  RING->count           = 0;
-  RING->allowOverwrite  = ALLOW_OVERWRITE;
-  RING->allocator       = ALLOCATOR;
+  RING->capacity       = justRingNextPowerOfTwo(CAPACITY);
+  RING->mask           = RING->capacity - 1; 
+  RING->elementSize    = ELEMENT_SIZE;
+  RING->head           = 0;
+  RING->tail           = 0;
+  RING->count          = 0;
+  RING->allowOverwrite = ALLOW_OVERWRITE;
+  RING->allocator      = ALLOCATOR;
+  RING->tag            = TAG;
 
   size_t totalBytes = RING->capacity * RING->elementSize;
 
   if (RING->allocator)
   {
-    RING->data = (uint8_t*) forgeLinearAllocAllocate(RING->allocator, totalBytes, DEFAULT_ALIGNMENT_BYTES);
+    RING->data = (uint8_t*) justLinearAllocAllocate(RING->allocator, totalBytes, 0);
   }
-  else 
+  else
   {
-    RING->data = (uint8_t*) FORGE_MALLOC(totalBytes);
+    RING->data = (uint8_t*) JUST_MALLOC_TAGGED(totalBytes, RING->tag);
   }
 
   if (!RING->data)
   {
-    FORGE_LOG_ERROR("[RING BUFFER] : Failed to allocate memory for ring buffer!");
+    JUST_LOG_ERROR("[RING BUFFER] : Failed to allocate %zu bytes for ring buffer", totalBytes);
+    RING->capacity = 0;
+    RING->mask     = 0;
     return false;
   }
 
   return true;
 }
 
-void forgeRingBufferDestroy(ForgeRingBuffer* RING)
+JUST_API void justRingBufferDestroy(JustRingBuffer* RING)
 {
-  FORGE_ASSERT_DEBUG_MESSAGE(RING != NULL, "[RING BUFFER] : Cannot destroy a NULL RING BUFFER");
+  JUST_ASSERT_DEBUG_MESSAGE(RING != NULL, "[RING BUFFER] : Cannot destroy a NULL RING");
 
-  if (RING->data)
+  if (RING->data && !RING->allocator)
   {
-    if (!RING->allocator) FORGE_FREE(RING->data);
-    RING->data = NULL;
+    JUST_FREE(RING->data);
   }
 
+  RING->data        = NULL;
   RING->capacity    = 0;
+  RING->mask        = 0;
   RING->elementSize = 0;
   RING->head        = 0;
   RING->tail        = 0;

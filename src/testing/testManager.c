@@ -1,78 +1,74 @@
-#include <forgeUtils/core/logger.h>
-#include <stdbool.h>
+#include <justUtils/testing/testManager.h>
+#include <justUtils/core/asserts.h>
+#include <justUtils/core/logger.h>
 #include <stdint.h>
-#include <forgeUtils/testing/testManager.h>
-#include <forgeUtils/testing/expect.h>
-#include <forgeUtils/core/asserts.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#if !defined(_WIN32)
+#if JUST_PLATFORM != JUST_PLATFORM_WINDOWS
   #include <unistd.h>
   #include <sys/wait.h>
 #endif
 
-typedef struct ForgeTestEntry 
+typedef struct justTestEntry 
 {
-  ForgeTestFunc func;
-  const char*   description;
-} ForgeTestEntry;
+  justTestFunc func;
+  const char*  description;
+} justTestEntry;
 
-typedef struct ForgeTestGroup 
+typedef struct justTestGroup 
 {
-  ForgeTestEntry  tests[MAX_TESTS_PER_GROUP];
-  size_t          count;
-} ForgeTestGroup;
+  justTestEntry tests[JUST_MAX_TESTS_PER_GROUP];
+  size_t        count;
+} justTestGroup;
 
-static ForgeTestGroup testGroups[MAX_GROUPS];
+static justTestGroup testGroups[JUST_MAX_TEST_GROUPS];
 static size_t         maxGroupID = 0;
 
-void forgeTestRegister(ForgeTestFunc TEST_FUNC, const char* DESCRIPTION, uint8_t GROUP_ID) 
+JUST_API void justTestRegister(justTestFunc TEST_FUNC, const char* DESCRIPTION, uint8_t GROUP_ID) 
 {
-  FORGE_ASSERT_MESSAGE(TEST_FUNC != NULL, "[TEST MANAGER] : Test function cannot be NULL");
-  FORGE_ASSERT_MESSAGE(GROUP_ID < MAX_GROUPS, "[TEST MANAGER] : Exceeded maximum group ID limit");
+  JUST_ASSERT_MESSAGE(TEST_FUNC != NULL, "[TEST MANAGER] : Test function cannot be NULL");
+  JUST_ASSERT_MESSAGE(GROUP_ID < JUST_MAX_TEST_GROUPS, "[TEST MANAGER] : GROUP_ID out of bounds");
 
   if (GROUP_ID > maxGroupID) maxGroupID = GROUP_ID;
 
-  ForgeTestGroup* group = &testGroups[GROUP_ID];
-  FORGE_ASSERT_MESSAGE(group->count < MAX_TESTS_PER_GROUP, "[TEST MANAGER] Group test capacity exceeded!");
+  justTestGroup* group = &testGroups[GROUP_ID];
+  JUST_ASSERT_MESSAGE(group->count < JUST_MAX_TESTS_PER_GROUP, "[TEST MANAGER] : Group test capacity exceeded!");
 
-  group->tests[group->count].func         = TEST_FUNC;
-  group->tests[group->count].description  = DESCRIPTION;
+  group->tests[group->count].func        = TEST_FUNC;
+  group->tests[group->count].description = DESCRIPTION;
   group->count++;
 }
 
 #if !defined(_WIN32)
-static bool runTestForked(ForgeTestEntry TEST, uint8_t* OUT_RESULT) 
+static bool runTestForked(justTestEntry TEST, JustTestResult* OUT_RESULT) 
 {
   int32_t pipefd[2];
   if (pipe(pipefd) != 0) 
   {
-    FORGE_LOG_ERROR("[TEST MANAGER] : Failed to create process pipe");
+    JUST_LOG_ERROR("[TEST MANAGER] : Failed to create process pipe");
     return false;
   }
 
   pid_t pid = fork();
   if (pid == 0) 
   {
-    // - - - Child Process: Redirect stdout/stderr to pipe and run test
+    // - - - Redirect child stdout & stderr to pipe
     dup2(pipefd[1], STDOUT_FILENO);
     dup2(pipefd[1], STDERR_FILENO);
     close(pipefd[0]);
     close(pipefd[1]);
 
-    uint8_t res = TEST.func();
-    exit((int32_t)res);
+    JustTestResult res = TEST.func();
+    exit((int)res);
   }
 
   // - - - Parent Process
   close(pipefd[1]);
 
-  char buffer[1024];
+  char    buffer[1024];
   ssize_t bytesRead;
-
-  // - - - Flush child logs to current terminal stream
   while ((bytesRead = read(pipefd[0], buffer, sizeof(buffer) - 1)) > 0) 
   {
     buffer[bytesRead] = '\0';
@@ -83,15 +79,18 @@ static bool runTestForked(ForgeTestEntry TEST, uint8_t* OUT_RESULT)
   int32_t status = 0;
   waitpid(pid, &status, 0);
 
-  // - - - Detect signal crashes (SIGSEGV, SIGABRT, etc.)
-  if (WIFSIGNALED(status)) return false;
+  // - - - Trapped by signal (SIGSEGV, SIGABRT, SIGBUS, etc.)
+  if (WIFSIGNALED(status)) 
+  {
+    return false;
+  }
 
-  *OUT_RESULT = (uint8_t)WEXITSTATUS(status);
+  *OUT_RESULT = (JustTestResult)WEXITSTATUS(status);
   return true;
 }
 #endif
 
-size_t forge_test_run_all(void) 
+JUST_API size_t justTestRunAll(void) 
 {
   size_t totalTests   = 0;
   size_t passedTests  = 0;
@@ -99,65 +98,65 @@ size_t forge_test_run_all(void)
   size_t failedTests  = 0;
   size_t crashedTests = 0;
 
-  FORGE_LOG_INFO("==================================================");
-  FORGE_LOG_INFO("               RUNNING UNIT TESTS                ");
-  FORGE_LOG_INFO("==================================================");
+  JUST_LOG_INFO("==================================================");
+  JUST_LOG_INFO("               RUNNING UNIT TESTS                 ");
+  JUST_LOG_INFO("==================================================");
 
   for (size_t g = 0; g <= maxGroupID; ++g) 
   {
-    ForgeTestGroup* group = &testGroups[g];
+    justTestGroup* group = &testGroups[g];
     if (group->count == 0) continue;
 
-    FORGE_LOG_INFO("\n--- [TEST GROUP %zu] ---", g);
+    JUST_LOG_INFO("\n--- [TEST GROUP %zu] ---", g);
 
     for (size_t i = 0; i < group->count; ++i) 
     {
-      ForgeTestEntry test = group->tests[i];
+      justTestEntry test = group->tests[i];
       totalTests++;
 
-      uint8_t result = FORGE_TEST_FAIL;
-      bool executed_safely = true;
+      JustTestResult result          = JUST_TEST_FAIL;
+      bool            executedSafely  = true;
 
     #if !defined(_WIN32)
-      executed_safely = runTestForked(test, &result);
+      executedSafely = runTestForked(test, &result);
     #else
       result = test.func();
     #endif
 
-      if (!executed_safely) 
+      if (!executedSafely) 
       {
         crashedTests++;
-        FORGE_LOG_ERROR("  [CRASHED] %s", test.description);
+        JUST_LOG_ERROR("  [CRASHED] %s", test.description);
       } 
-      else if (result == FORGE_TEST_PASS) 
+      else if (result == JUST_TEST_PASS) 
       {
         passedTests++;
-        FORGE_LOG_INFO("  [PASS]    %s", test.description);
+        JUST_LOG_INFO("  [PASS]    %s", test.description);
       } 
-      else if (result == FORGE_TEST_SKIP) 
+      else if (result == JUST_TEST_SKIP) 
       {
         skippedTests++;
-        FORGE_LOG_WARNING("  [SKIP]    %s", test.description);
+        JUST_LOG_WARNING("  [SKIP]    %s", test.description);
       } 
       else 
       {
         failedTests++;
-        FORGE_LOG_ERROR("  [FAIL]    %s", test.description);
+        JUST_LOG_ERROR("  [FAIL]    %s", test.description);
       }
     }
   }
 
-  FORGE_LOG_INFO("\n==================================================");
-  FORGE_LOG_INFO("                  TEST SUMMARY                    ");
-  FORGE_LOG_INFO("==================================================");
-  FORGE_LOG_INFO(" Total Executed : %zu", totalTests);
-  FORGE_LOG_INFO(" Passed         : %zu", passedTests);
+  JUST_LOG_INFO("\n==================================================");
+  JUST_LOG_INFO("                  TEST SUMMARY                    ");
+  JUST_LOG_INFO("==================================================");
+  JUST_LOG_INFO(" Total Executed : %zu", totalTests);
+  JUST_LOG_INFO(" Passed         : %zu", passedTests);
   
-  if (skippedTests > 0) FORGE_LOG_WARNING(" Skipped        : %zu", skippedTests);
-  if (failedTests  > 0) FORGE_LOG_ERROR(" Failed         : %zu", failedTests);
-  if (crashedTests > 0) FORGE_LOG_ERROR(" Crashed        : %zu", crashedTests);
+  if (skippedTests > 0) JUST_LOG_WARNING(" Skipped        : %zu", skippedTests);
+  if (failedTests  > 0) JUST_LOG_ERROR(" Failed         : %zu", failedTests);
+  if (crashedTests > 0) JUST_LOG_ERROR(" Crashed        : %zu", crashedTests);
 
-  FORGE_LOG_INFO("==================================================\n");
+  JUST_LOG_INFO("==================================================\n");
 
-  return (int32_t)(failedTests + crashedTests);
+  return (failedTests + crashedTests);
 }

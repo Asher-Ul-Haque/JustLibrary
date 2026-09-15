@@ -1,144 +1,104 @@
-#include <forgeUtils/memory/linearAlloc.h>
-#include <forgeUtils/memory/tracker.h>
-#include <forgeUtils/core/asserts.h>
-#include <forgeUtils/core/logger.h>
+#include <justUtils/memory/linearAlloc.h>
+#include <justUtils/memory/tracker.h>
+#include <justUtils/core/asserts.h>
+#include <justUtils/core/logger.h>
 #include <stdalign.h>
 #include <stdint.h>
 #include <stdlib.h>
 
-static inline uintptr_t alignUpPtr(uintptr_t PTR, uintptr_t ALIGNMENT)
+static inline bool justlinearAllocIsPowerOfTwo(size_t X)
 {
-  FORGE_ASSERT_DEBUG_MESSAGE(ALIGNMENT % 2 == 0, "[LINEAR ALLOC] : ALIGNMENT must be a multiple of 2");
-  if (ALIGNMENT == 0) ALIGNMENT = DEFAULT_ALIGNMENT_BYTES;
-  return (PTR + (ALIGNMENT - 1)) & ~(ALIGNMENT - 1);
+  return (X != 0) && ((X & (X - 1)) == 0);
 }
 
-bool forgeLinearAllocCreate(
-  ForgeLinearAllocator* ALLOCATOR, 
-  size_t           TOTAL_SIZE, 
-  void*            MEMORY, 
-  bool             ALLOW_RESIZE)
+bool justLinearAllocCreate(
+  justLinearAllocator* ALLOCATOR,
+  size_t                TOTAL_SIZE,
+  void*                 USER_BUFFER,
+  const char*           TAG)
 {
-  FORGE_ASSERT_DEBUG_MESSAGE(ALLOCATOR, "[LINEAR ALLOCATOR] : Cannot create an allocator which is null");
-  FORGE_ASSERT_DEBUG_MESSAGE(TOTAL_SIZE > 0,  "[LINEAR ALLOCATOR] : Cannot create an allocator with 0 TOTAL_SIZE");
+  JUST_ASSERT_DEBUG_MESSAGE(ALLOCATOR != NULL, "[LINEAR ALLOC] : Target ALLOCATOR pointer cannot be NULL");
+  JUST_ASSERT_DEBUG_MESSAGE(TOTAL_SIZE > 0,    "[LINEAR ALLOC] : TOTAL_SIZE must be greater than 0");
 
   ALLOCATOR->totalSize  = TOTAL_SIZE;
   ALLOCATOR->allocated  = 0;
-  ALLOCATOR->resize     = ALLOW_RESIZE;
-  ALLOCATOR->ownsMemory = (MEMORY == NULL);
+  ALLOCATOR->ownsMemory = (USER_BUFFER == NULL);
 
   if (ALLOCATOR->ownsMemory)
   {
-    ALLOCATOR->memory = FORGE_MALLOC(ALLOCATOR->totalSize);
-    if (ALLOCATOR->memory == NULL) 
+    const char* allocTag = (TAG && TAG[0] != '\0') ? TAG : "LINEAR_ALLOC_BUFFER";
+    ALLOCATOR->memory = JUST_MALLOC_TAGGED(TOTAL_SIZE, allocTag);
+
+    if (!ALLOCATOR->memory)
     {
-      FORGE_LOG_ERROR("[LINEAR ALLOCATOR] : Failed to allocate memory %zu", ALLOCATOR->totalSize);
+      JUST_LOG_FATAL("[LINEAR ALLOC] : Failed to allocate %zu bytes for backing buffer", TOTAL_SIZE);
       return false;
     }
   }
-  else ALLOCATOR->memory = MEMORY;
+  else
+  {
+    // - - - Verify user buffer satisfies max_align_t alignment
+    JUST_ASSERT_DEBUG_MESSAGE(
+      ((uintptr_t)USER_BUFFER % alignof(max_align_t)) == 0,
+      "[LINEAR ALLOC] : Supplied USER_BUFFER must be aligned to max_align_t");
 
-  FORGE_LOG_TRACE("[LINEAR ALLOCATOR] : Created a linear allocator with %zu size", ALLOCATOR->totalSize);
+    ALLOCATOR->memory = USER_BUFFER;
+  }
+
   return true;
 }
 
-void forgeLinearAllocDestroy(ForgeLinearAllocator* ALLOCATOR)
+void justLinearAllocDestroy(justLinearAllocator* ALLOCATOR)
 {
-  FORGE_ASSERT_DEBUG_MESSAGE(ALLOCATOR, "[LINEAR ALLOCATOR] : Cannot create an allocator which is null");
+  if (!ALLOCATOR) return;
 
-  if (ALLOCATOR->ownsMemory) 
+  if (ALLOCATOR->ownsMemory && ALLOCATOR->memory)
   {
-    FORGE_FREE(ALLOCATOR->memory);
-    ALLOCATOR->memory = false;
+    JUST_FREE(ALLOCATOR->memory);
   }
 
-  ALLOCATOR->totalSize = 0;
-  ALLOCATOR->allocated = 0;
-
-  FORGE_LOG_TRACE("[LINEAR ALLOCATOR] : Destroyed a linear allocator");
+  ALLOCATOR->memory     = NULL;
+  ALLOCATOR->totalSize  = 0;
+  ALLOCATOR->allocated  = 0;
+  ALLOCATOR->ownsMemory = false;
 }
 
-void* forgeLinearAllocAllocate(ForgeLinearAllocator* ALLOCATOR, size_t SIZE, size_t ALIGNMENT)
+void* justLinearAllocAllocate(
+  justLinearAllocator* ALLOCATOR, 
+  size_t                SIZE, 
+  size_t                ALIGNMENT)
 {
-  FORGE_ASSERT_DEBUG_MESSAGE(ALLOCATOR != NULL, "[LINEAR ALLOCATOR] : Linear Allocator cannot be null");
+  JUST_ASSERT_DEBUG(ALLOCATOR != NULL);
+  if (SIZE == 0) return NULL;
 
-  if (SIZE == 0)
+  if (ALIGNMENT == 0)
   {
-    FORGE_LOG_ERROR("[LINEAR ALLOCATOR] : Cannot allocate memory with 0 size")
-    return NULL; 
+    ALIGNMENT = DEFAULT_ALIGNMENT_BYTES;
   }
 
-  uintptr_t currentAddr       = (uintptr_t) ALLOCATOR->memory + ALLOCATOR->allocated;
-  uintptr_t alignedAddr       = alignUpPtr(currentAddr, ALIGNMENT);
-  size_t    alignmentPadding  = alignedAddr - currentAddr;
-  size_t    requiredBytes     = SIZE + alignmentPadding;
+  JUST_ASSERT_DEBUG_MESSAGE(justlinearAllocIsPowerOfTwo(ALIGNMENT), "[LINEAR ALLOC] : ALIGNMENT must be a power of two");
 
-  // - - - Check if allocation exceeds remaining capacity
-  if (ALLOCATOR->allocated + requiredBytes > ALLOCATOR->totalSize)
+  // - - - Absolute pointer alignment
+  uintptr_t currentPtr  = (uintptr_t)ALLOCATOR->memory + ALLOCATOR->allocated;
+  uintptr_t alignedPtr  = (currentPtr + (ALIGNMENT - 1)) & ~(ALIGNMENT - 1);
+  size_t    padding     = alignedPtr - currentPtr;
+
+  if (ALLOCATOR->allocated + padding + SIZE > ALLOCATOR->totalSize)
   {
-    // - - - expand capacity 
-    if (ALLOCATOR->resize && ALLOCATOR->ownsMemory)
-    {
-      size_t newCapacity = ALLOCATOR->totalSize * 2;
-      if (newCapacity < ALLOCATOR->allocated + requiredBytes)
-      { newCapacity = ALLOCATOR->allocated + requiredBytes; }
-
-      void* newMem = FORGE_REALLOC(ALLOCATOR->memory, newCapacity);
-      if (!newMem) 
-      {
-        FORGE_LOG_ERROR("[LINEAR ALLOC] : Resize with FORGE_REALLOC failed");
-        return NULL;
-      }
-
-      ALLOCATOR->memory     = newMem;
-      ALLOCATOR->totalSize  = newCapacity;
-
-      // - - - Recalculate pointers after buffer move 
-      currentAddr       = (uintptr_t)ALLOCATOR->memory + ALLOCATOR->allocated;
-      alignedAddr       = alignUpPtr(currentAddr, ALIGNMENT);
-      alignmentPadding  = alignedAddr - currentAddr;
-      requiredBytes     = SIZE + alignmentPadding;
-    }
-    else 
-    {
-      FORGE_LOG_ERROR("[LINEAR ALLOC] : Out of memory and cannot resize");
-      return NULL;
-    }
+    JUST_LOG_ERROR("[LINEAR ALLOC] : Out of memory! Requested %zu bytes (pad %zu), but only %zu bytes remaining",
+                    SIZE, padding, ALLOCATOR->totalSize - ALLOCATOR->allocated);
+    return NULL;
   }
 
-  ALLOCATOR->allocated += requiredBytes;
-  return (void*) alignedAddr;
+  ALLOCATOR->allocated += padding + SIZE;
+  return (void*)alignedPtr;
 }
 
-void forgeLinearAllocFree(ForgeLinearAllocator* ALLOCATOR, size_t SIZE)
-{
-  FORGE_ASSERT_DEBUG_MESSAGE(ALLOCATOR != NULL, "[LINEAR ALLOCATOR] : Cannot free from a null LinearAllocator");
-
-  if (SIZE >= ALLOCATOR->allocated) ALLOCATOR->allocated  = 0;
-  else                              ALLOCATOR->allocated -= SIZE;
-
-  // - - - Check if resize is needed 
-  if (!ALLOCATOR->resize)                               return;
-  if (ALLOCATOR->allocated >= ALLOCATOR->totalSize / 2) return;
-
-  uintptr_t newCapacity = ALLOCATOR->totalSize / 2;
-  if (newCapacity < 1) newCapacity = 1;
-  void* newMem = FORGE_REALLOC(ALLOCATOR->memory, newCapacity);
-  if (!newMem) 
-  {
-    FORGE_LOG_ERROR("[LINEAR ALLOC] : Resize with FORGE_REALLOC failed");
-    return;
-  }
-
-  ALLOCATOR->memory     = newMem;
-  ALLOCATOR->totalSize  = newCapacity;
-}
-
-void forgeLinearAllocDebugPrint(ForgeLinearAllocator* ALLOCATOR)
+void justLinearAllocDebugPrint(justLinearAllocator* ALLOCATOR)
 {
   #ifdef DEBUG 
     #include <memory.h>
-    FORGE_ASSERT_DEBUG_MESSAGE(ALLOCATOR != NULL, "[LINEAR ALLOCATOR] : Cannot debug print a NULL ALLOCATOR");
+    JUST_ASSERT_DEBUG_MESSAGE(ALLOCATOR != NULL, "[LINEAR ALLOCATOR] : Cannot debug print a NULL ALLOCATOR");
 
     size_t BAR_WIDTH = 50;
 
@@ -169,7 +129,7 @@ void forgeLinearAllocDebugPrint(ForgeLinearAllocator* ALLOCATOR)
 
     bar[(int)BAR_WIDTH] = '\0';
 
-    FORGE_LOG_INFO(
+    JUST_LOG_INFO(
       "Pool [%s]\n"
       "Capacity : %zu bytes\n"
       "Used     : %zu (%.1f%%)\n"

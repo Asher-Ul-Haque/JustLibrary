@@ -1,3 +1,25 @@
+/*
+ * Copyright (C) [2026] [Asher-Ul-Haque aka Just Somebody]
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
 /**
  * @file logger.c 
  * Implementation of logging utilities for forgelib 
@@ -6,8 +28,8 @@
  * @warning This file is internal implementation
  */
 
-#include <forgeUtils/core/logger.h>
-#include <forgeUtils/core/asserts.h>
+#include <justUtils/core/logger.h>
+#include <justUtils/core/asserts.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <memory.h>
@@ -63,10 +85,10 @@ static void writeConsole(const char* MESSAGE, LogLevel COLOR)
  * @warning this function is internal to forge, do not use directly 
  * @see FORGE_LOG macros for usage
  */
-void logOutput(LogLevel LEVEL, const char* MESSAGE, ...)
+JUST_API void justLogOutput(LogLevel LEVEL, const char* MESSAGE, ...)
 {
   const char* levelStrings[6]   = {"[FATAL]: ", "[ERROR]: ", "[WARN]: ", "[INFO]: ", "[DEBUG]: ", "[TRACE]: "};
-  const int   messageLength     = 32000;
+  const int   messageLength     = 1024 * 4;
   char        outputMessage     [messageLength];
   memset(outputMessage, 0, sizeof(outputMessage));
 
@@ -78,8 +100,8 @@ void logOutput(LogLevel LEVEL, const char* MESSAGE, ...)
   va_end(argumentPointer);
 
   // - - - Prepend with level header
-  char finalMessage[32000];
-  #if PRINT_LOG_TYPES == 1
+  char finalMessage[messageLength];
+  #ifdef PRINT_LOG_TYPES
     sprintf(finalMessage, "%s\t%s", levelStrings[LEVEL], outputMessage);
   #else 
     sprintf(finalMessage, "%s", outputMessage);
@@ -92,16 +114,20 @@ void logOutput(LogLevel LEVEL, const char* MESSAGE, ...)
 // - - - | Assert Functions | - - -
 
 
-void reportAssertionFailure(const char* EXPRESSION, const char* MESSAGE, const char* FILE, const char* FUNCTION, size_t LINE)
+JUST_API _Noreturn void justReportAssertionFailure(const char* EXPRESSION, const char* MESSAGE, const char* FILE, const char* FUNCTION, size_t LINE)
 {
-  logOutput(LOG_LEVEL_FATAL, "ASSERT FAIL :     %s\nMESSAGE     :     %s\nLOCATION    :     file: %s at line: %d in function: %s\n", EXPRESSION, MESSAGE, FILE, LINE, FUNCTION);
+  justLogOutput(LOG_LEVEL_FATAL,
+            "ASSERT FAIL :     %s\n"
+            "MESSAGE     :     %s\n"
+            "LOCATION    :     file: %s at line: %zu in function: %s\n", 
+            EXPRESSION, MESSAGE, FILE, LINE, FUNCTION);
   abort();
 }
 
-void reportTODO(const char* COMMENT, const char* FILE, const char* FUNCTION, size_t LINE)
+JUST_API _Noreturn void reportTODO(const char* COMMENT, const char* FILE, const char* FUNCTION, size_t LINE)
 {
-  logOutput(LOG_LEVEL_ERROR, "Oopsie!, you have a TODO!!!");
-  logOutput(LOG_LEVEL_ERROR, "At: %s:%d -> Function: %s", FILE, LINE, FUNCTION);
-  if (COMMENT) logOutput(LOG_LEVEL_WARNING, "COMMENT: %s", COMMENT);
+  justLogOutput(LOG_LEVEL_ERROR, "Oopsie!, you have a TODO!!!");
+  justLogOutput(LOG_LEVEL_ERROR, "At: %s:%zu -> Function: %s", FILE, LINE, FUNCTION);
+  if (COMMENT) justLogOutput(LOG_LEVEL_WARNING, "COMMENT: %s", COMMENT);
   abort();
 }

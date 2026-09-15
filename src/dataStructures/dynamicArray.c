@@ -1,156 +1,185 @@
-#include <forgeUtils/core/logger.h>
-#include <forgeUtils/memory/tracker.h>
-#include <forgeUtils/dataStructures/dynamicArray.h>
+#include <justUtils/core/logger.h>
+#include <justUtils/memory/tracker.h>
+#include <justUtils/dataStructures/dynamicArray.h>
 #include <stdalign.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
-bool forgeDynamicArrayCreate(ForgeDynamicArray* ARRAY, size_t INITIAL_CAPACITY, size_t ELEMENT_SIZE, ForgeLinearAllocator* ALLOCATOR)
+bool justDynamicArrayCreate(
+  justDynamicArray*    DARRAY,
+  size_t                INITIAL_CAPACITY,
+  size_t                ELEMENT_SIZE,
+  justLinearAllocator* ALLOCATOR,
+  const char*           TAG)
 {
-  FORGE_ASSERT_DEBUG_MESSAGE(ARRAY != NULL, "[DYNAMIC ARRAY] : Cannot create a NULL ARRAY");
-  FORGE_ASSERT_DEBUG_MESSAGE(ELEMENT_SIZE > 0, "[DYNAMIC ARRAY] : Element size must be greater than 0");
+  JUST_ASSERT_DEBUG_MESSAGE(DARRAY != NULL, "[DYNAMIC DARRAY] : Cannot create a NULL DARRAY");
+  JUST_ASSERT_DEBUG_MESSAGE(ELEMENT_SIZE > 0, "[DYNAMIC DARRAY] : Element size must be greater than 0");
 
-  ARRAY->elementSize  = ELEMENT_SIZE;
-  ARRAY->size         = 0;
-  ARRAY->capacity     = (INITIAL_CAPACITY > 0) ? INITIAL_CAPACITY : FORGE_ARRAY_DEFAULT_CAPACITY;
-  ARRAY->allocator    = ALLOCATOR;
+  DARRAY->elementSize   = ELEMENT_SIZE;
+  DARRAY->size          = 0;
+  DARRAY->capacity      = INITIAL_CAPACITY;
+  DARRAY->allocator     = ALLOCATOR;
+  DARRAY->tag           = TAG;
 
-  size_t totalBytes = ARRAY->capacity * ARRAY->elementSize;
+  size_t totalBytes = DARRAY->capacity * DARRAY->elementSize;
 
-  if (ARRAY->allocator) 
+  if (DARRAY->capacity == 0) return true;
+
+  if (DARRAY->allocator) 
   {
-    ARRAY->data = (uint8_t*) forgeLinearAllocAllocate(ARRAY->allocator, totalBytes, 0);
+    DARRAY->data = (uint8_t*) justLinearAllocAllocate(DARRAY->allocator, totalBytes, 0);
   }
   else 
   {
-    ARRAY->data = (uint8_t*) FORGE_MALLOC(totalBytes);
+    DARRAY->data = (uint8_t*) JUST_MALLOC_TAGGED(totalBytes, TAG);
   }
 
-  if (!ARRAY->data)
+  if (!DARRAY->data)
   {
-    FORGE_LOG_ERROR("[DYNAMIC ARRAY] : Failed to allocate memory for array!");
-    ARRAY->capacity = 0;
+    JUST_LOG_ERROR("[DYNAMIC DARRAY] : Failed to allocate memory for array!");
+    DARRAY->capacity = 0;
     return false;
   }
 
   return true;
 }
 
-void forgeDynamicArrayDestroy(ForgeDynamicArray* ARRAY)
+void justDynamicArrayDestroy(justDynamicArray* DARRAY)
 {
-  FORGE_ASSERT_DEBUG_MESSAGE(ARRAY != NULL, "[DYNAMIC ARRAY] : Cannot destroy a NULL array.");
+  JUST_ASSERT_DEBUG_MESSAGE(DARRAY != NULL, "[DYNAMIC DARRAY] : Cannot destroy a NULL array.");
 
-  if (ARRAY->data)
+  if (DARRAY->data)
   {
-    if (!ARRAY->allocator) FORGE_FREE(ARRAY->data);
-    ARRAY->data = NULL;
+    if (!DARRAY->allocator) JUST_FREE(DARRAY->data);
   }
 
-  ARRAY->capacity     = 0;
-  ARRAY->size         = 0;
-  ARRAY->elementSize  = 0;
-  ARRAY->allocator    = NULL;
+  DARRAY->data         = NULL;
+  DARRAY->capacity     = 0;
+  DARRAY->size         = 0;
+  DARRAY->elementSize  = 0;
+  DARRAY->allocator    = NULL;
 }
 
-bool forgeDynamicArrayReserve(ForgeDynamicArray* ARRAY, size_t MIN_CAPACITY)
+bool justDynamicArrayReserve(justDynamicArray* DARRAY, size_t MIN_CAPACITY)
 {
-  FORGE_ASSERT_DEBUG_MESSAGE(ARRAY != NULL, "[DYNAMIC ARRAY] : Cannot reserve capcity in a NULL ARRAY");
+  JUST_ASSERT_DEBUG_MESSAGE(DARRAY != NULL, "[DYNAMIC DARRAY] : Cannot reserve capcity in a NULL DARRAY");
 
-  if (MIN_CAPACITY <= ARRAY->capacity) return true;
+  if (MIN_CAPACITY <= DARRAY->capacity) return true;
 
-  size_t newCapacity = ARRAY->capacity * 2;
+  size_t newCapacity = DARRAY->capacity * 2;
   if (newCapacity < MIN_CAPACITY) newCapacity = MIN_CAPACITY;
 
-  size_t    newBytes  = newCapacity * ARRAY->elementSize;
+  size_t    newBytes  = newCapacity * DARRAY->elementSize;
   uint8_t*  newData   = NULL;
 
   // - - - allocate new chunk from Linear Allocator and copy existing data
-  if (ARRAY->allocator)
+  if (DARRAY->allocator)
   {
-    newData = (uint8_t*) forgeLinearAllocAllocate(ARRAY->allocator, newBytes, 0);
+    newData = (uint8_t*) justLinearAllocAllocate(DARRAY->allocator, newBytes, 0);
     if (!newData)
     {
-      FORGE_LOG_ERROR("[DYNAMIC ARRAY] : Failed to allocate new chunks via Linear Allocator");
+      JUST_LOG_ERROR("[DYNAMIC DARRAY] : Failed to allocate new chunks via Linear Allocator");
       return false;
     }
-    memcpy(newData, ARRAY->data, ARRAY->size * ARRAY->elementSize);
+    memcpy(newData, DARRAY->data, DARRAY->size * DARRAY->elementSize);
   }
-  else 
+  else
   {
-    newData = FORGE_REALLOC(ARRAY->data, newBytes);
+    if (DARRAY->data == NULL)  newData = JUST_MALLOC_TAGGED(newBytes, DARRAY->tag);
+    else                      newData = JUST_REALLOC(DARRAY->data, newBytes);
   }
 
   if (!newData)
   {
-    FORGE_LOG_ERROR("[DYNAMIC ARRAY] : Failed to expenad array capacity!");
+    JUST_LOG_ERROR("[DYNAMIC DARRAY] : Failed to expenad array capacity!");
     return false;
   }
 
-  ARRAY->data     = newData;
-  ARRAY->capacity = newCapacity;
+  DARRAY->data     = newData;
+  DARRAY->capacity = newCapacity;
   return true;
 }
 
-bool __forgeDynamicArrayGrow(ForgeDynamicArray* ARRAY)
+bool __justDynamicArrayGrow(justDynamicArray* DARRAY)
 {
-  FORGE_ASSERT_DEBUG(ARRAY != NULL);
+  JUST_ASSERT_DEBUG(DARRAY != NULL);
 
-  // 2x growth, or initial default if capacity was zero
-  size_t newCapacity = ARRAY->capacity ? (ARRAY->capacity * 2) : FORGE_ARRAY_DEFAULT_CAPACITY;
-  return forgeDynamicArrayReserve(ARRAY, newCapacity);
+  size_t targetCap = DARRAY->capacity ? (DARRAY->capacity * 2) : JUST_DARRAY_DEFAULT_GROWTH_CAPACITY;
+  return justDynamicArrayReserve(DARRAY, targetCap);
 }
 
-bool forgeDynamicArrayPushRange(ForgeDynamicArray* ARRAY, const void* SRC_BUFFER, size_t COUNT)
+bool justDynamicArrayPushRange(justDynamicArray* DARRAY, const void* SRC_BUFFER, size_t COUNT)
 {
-  FORGE_ASSERT_DEBUG(ARRAY != NULL);
+  JUST_ASSERT_DEBUG(DARRAY != NULL);
   if (!SRC_BUFFER || COUNT == 0) return true;
 
-  size_t requiredCapacity = ARRAY->size + COUNT;
-  if (requiredCapacity > ARRAY->capacity)
+  size_t requiredCapacity = DARRAY->size + COUNT;
+  if (requiredCapacity > DARRAY->capacity)
   {
-    size_t targetCapacity = ARRAY->capacity ? ARRAY->capacity : FORGE_ARRAY_DEFAULT_CAPACITY;
-    while (targetCapacity < requiredCapacity) 
-    {
-      targetCapacity *= 2;
-    }
-
-    if (!forgeDynamicArrayReserve(ARRAY, targetCapacity)) 
+    if (!justDynamicArrayReserve(DARRAY, requiredCapacity)) 
     {
       return false;
     }
   }
 
-  uint8_t* dest = ARRAY->data + (ARRAY->size * ARRAY->elementSize);
-  memcpy(dest, SRC_BUFFER, COUNT * ARRAY->elementSize);
-  ARRAY->size += COUNT;
+  uint8_t* dest = DARRAY->data + (DARRAY->size * DARRAY->elementSize);
+  memcpy(dest, SRC_BUFFER, COUNT * DARRAY->elementSize);
+  DARRAY->size += COUNT;
 
   return true;
 }
 
-bool forgeDynamicArrayShrinkToFit(ForgeDynamicArray* ARRAY)
+bool justDynamicArrayShrinkToFit(justDynamicArray* DARRAY)
 {
-  FORGE_ASSERT_DEBUG_MESSAGE(ARRAY != NULL, "[DYNAMIC ARRAY] : Cannot shrink a NULL ARRAY");
+  JUST_ASSERT_DEBUG_MESSAGE(DARRAY != NULL, "[DYNAMIC DARRAY] : Cannot shrink a NULL DARRAY");
 
   // - - - Linear allocators cannot free or shrink intermediate allocations
-  if (ARRAY->allocator) 
+  if (DARRAY->allocator) 
   {
-    FORGE_LOG_ERROR("[DYNAMIC ARRAY] : Cannot shrink an ARRAY that uses a linear allocator");
+    JUST_LOG_ERROR("[DYNAMIC DARRAY] : Cannot shrink an DARRAY that uses a linear allocator");
     return false;
   }
 
-  size_t targetCap = ARRAY->size > 0 ? ARRAY->size : FORGE_ARRAY_DEFAULT_CAPACITY;
-  if (targetCap >= ARRAY->capacity) return true;
+  if (DARRAY->size == DARRAY->capacity) return true;
 
-  size_t  newBytes  = targetCap * ARRAY->elementSize;
-  void*   newData   = FORGE_REALLOC(ARRAY->data, newBytes);
+  if (DARRAY->size == 0)
+  {
+    if (DARRAY->data)
+    {
+      JUST_FREE(DARRAY->data);
+      DARRAY->data = NULL;
+    }
+    DARRAY->capacity = 0;
+    return true;
+  }
+
+  size_t  newBytes  = DARRAY->size * DARRAY->elementSize;
+  void*   newData   = NULL;
+  if (DARRAY->data)  newData = JUST_REALLOC(DARRAY->data, newBytes);
+  else              newData = JUST_MALLOC_TAGGED(newBytes, DARRAY->tag);
+
   if (!newData)
   {
-    FORGE_LOG_ERROR("[DYNAMIC ARRAY] : Failed to shrink array buffer!");
+    JUST_LOG_ERROR("[DYNAMIC DARRAY] : Failed to shrink array buffer!");
     return false;
   }
 
-  ARRAY->data     = newData;
-  ARRAY->capacity = targetCap;
+  DARRAY->data     = newData;
+  DARRAY->capacity = DARRAY->size;
   return true;
+}
+
+JUST_API void* justDynamicArrayEmplace(justDynamicArray* DARRAY)
+{
+  JUST_ASSERT_DEBUG_MESSAGE(DARRAY != NULL, "[DYNAMIC DARRAY] : Cannot emplace in a NULL array");
+
+  if (DARRAY->size >= DARRAY->capacity)
+  {
+    if (!__justDynamicArrayGrow(DARRAY)) return NULL;
+  }
+
+  void* slot = DARRAY->data + (DARRAY->size * DARRAY->elementSize);
+  DARRAY->size++;
+  return slot;
 }

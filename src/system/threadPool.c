@@ -1,220 +1,215 @@
-#if !defined(_WIN32)
+#include <justUtils/system/threadPool.h>
+#include <justUtils/core/asserts.h>
+#include <justUtils/core/logger.h>
+#include <justUtils/memory/tracker.h>
 
+#include <stdalign.h>
 #include <stdint.h>
-#include <forgeUtils/system/threadPool.h>
-#include <forgeUtils/core/asserts.h>
-#include <forgeUtils/core/logger.h>
-#include <forgeUtils/memory/tracker.h>
-
 #include <stdlib.h>
-#include <unistd.h>
 
-#define DEFAULT_queueCapacity 1024
+#define JUST_TP_DEFAULT_CAPACITY 1024
 
-static void* workerThreadLoop(void* ARG) 
+static int32_t workerThreadLoop(void* ARGUMENTS) 
 {
-  ForgeThreadPool* pool = (ForgeThreadPool*)ARG;
+  justThreadPool* pool = (justThreadPool*)ARGUMENTS;
 
   while (1) 
   {
-    pthread_mutex_lock(&pool->lock);
+    mtx_lock(&pool->lock);
 
-    // - - - Wait while queue is empty and pool is active
-    while (pool->queueCount == 0 && !pool->shutdown) 
+    while (justQueueIsEmpty(&pool->taskQueue) && !pool->shutdown) 
     {
-      pthread_cond_wait(&pool->hasWork, &pool->lock);
+      cnd_wait(&pool->hasWork, &pool->lock);
     }
 
-    if (pool->shutdown && pool->queueCount == 0) 
+    if (pool->shutdown && justQueueIsEmpty(&pool->taskQueue)) 
     {
-      pthread_mutex_unlock(&pool->lock);
-      pthread_exit(NULL);
+      mtx_unlock(&pool->lock);
+      return 0; 
     }
 
-    // - - - Pop task from circular queue
-    ForgeTask task = pool->taskQueue[pool->queueTail];
-    pool->queueTail = (pool->queueTail + 1) % pool->queueCapacity;
-    pool->queueCount--;
+    justTask task;
+    justQueueDequeue(&pool->taskQueue, &task);
     pool->activeWorkers++;
 
-    pthread_mutex_unlock(&pool->lock);
+    mtx_unlock(&pool->lock);
 
-    // - - - Execute task outside mutex lock
-    if (task.func) task.func(task.arg);
-
-    pthread_mutex_lock(&pool->lock);
-    pool->activeWorkers--;
-
-    // - - - Signal waiting callers if all tasks completed
-    if (pool->queueCount == 0 && pool->activeWorkers == 0) 
+    if (task.func) 
     {
-      pthread_cond_broadcast(&pool->workingDone);
+      task.func(task.arg);
     }
 
-    pthread_mutex_unlock(&pool->lock);
+    mtx_lock(&pool->lock);
+    pool->activeWorkers--;
+
+    if (justQueueIsEmpty(&pool->taskQueue) && pool->activeWorkers == 0) 
+    {
+      cnd_broadcast(&pool->workingDone);
+    }
+
+    mtx_unlock(&pool->lock);
   }
 
-  return NULL;
+  return 0;
 }
 
-bool forgeThreadpoolCreate(
-  ForgeThreadPool*       POOL,
-  size_t            THREAD_COUNT,
-  size_t            QUEUE_CAPACITY,
-  ForgeLinearAllocator*  ALLOCATOR)
+JUST_API bool justThreadpoolCreate(
+  justThreadPool*      POOL,
+  size_t               THREAD_COUNT,
+  size_t               QUEUE_CAPACITY,
+  justLinearAllocator* ALLOCATOR,
+  const char*          TAG)
 {
-  FORGE_ASSERT_DEBUG_MESSAGE(POOL != NULL, "[THREAD POOL] : Target pool pointer cannot be NULL");
+  JUST_ASSERT_DEBUG_MESSAGE(POOL != NULL, "[THREAD POOL] : Target pool cannot be NULL");
 
-  if (THREAD_COUNT == 0) 
+  if (THREAD_COUNT == 0)
   {
-    uint64_t cores = sysconf(_SC_NPROCESSORS_ONLN);
-    THREAD_COUNT = (cores > 0) ? (size_t)cores : 4;
+    JUST_LOG_ERROR("[THREAD POOL] : threadCount cannot be 0! Explicit worker count is required.");
+    return false;
   }
 
-  if (QUEUE_CAPACITY == 0) QUEUE_CAPACITY = DEFAULT_queueCapacity;
+  if (QUEUE_CAPACITY == 0)
+  {
+    QUEUE_CAPACITY = JUST_TP_DEFAULT_CAPACITY;
+  }
 
-  POOL->threadCount   = THREAD_COUNT;
-  POOL->queueCapacity = QUEUE_CAPACITY;
-  POOL->queueHead     = 0;
-  POOL->queueTail     = 0;
-  POOL->queueCount    = 0;
+  POOL->threadCount   = 0;
   POOL->activeWorkers = 0;
   POOL->shutdown      = false;
   POOL->allocator     = ALLOCATOR;
+  POOL->tag           = TAG;
 
-  // - - - Allocate thread handles array and task queue
+  // - - - Initialize queue via justQueue
+  if (!JUST_QUEUE_INIT_TAGGED(&POOL->taskQueue, QUEUE_CAPACITY, justTask, POOL->tag))
+  {
+    JUST_LOG_FATAL("[THREAD POOL] : Failed to initialize internal justQueue!");
+    return false;
+  }
+
+  // - - - Allocate thread handles array
+  size_t threadBytes = THREAD_COUNT * sizeof(thrd_t);
   if (POOL->allocator) 
   {
-    POOL->threads   = (pthread_t*)forgeLinearAllocAllocate(POOL->allocator, THREAD_COUNT * sizeof(pthread_t), DEFAULT_ALIGNMENT_BYTES);
-    POOL->taskQueue = (ForgeTask*)forgeLinearAllocAllocate(POOL->allocator, QUEUE_CAPACITY * sizeof(ForgeTask), DEFAULT_ALIGNMENT_BYTES);
+    POOL->threads = (thrd_t*)justLinearAllocAllocate(POOL->allocator, threadBytes, alignof(max_align_t));
   } 
   else 
   {
-    POOL->threads   = (pthread_t*)FORGE_MALLOC(THREAD_COUNT * sizeof(pthread_t));
-    POOL->taskQueue = (ForgeTask*)FORGE_MALLOC(QUEUE_CAPACITY * sizeof(ForgeTask));
+    POOL->threads = (thrd_t*)JUST_MALLOC_TAGGED(threadBytes, POOL->tag);
   }
 
-  if (!POOL->threads || !POOL->taskQueue) 
+  if (!POOL->threads) 
   {
-    FORGE_LOG_ERROR("[THREAD POOL] : Failed to allocate thread or task memory!");
+    JUST_LOG_FATAL("[THREAD POOL] : Failed to allocate worker thread handles!");
+    justQueueDestroy(&POOL->taskQueue);
     return false;
   }
 
-  // - - - Initialize POSIX mutex & condition variables
-  if (pthread_mutex_init(&POOL->lock, NULL) != 0 ||
-      pthread_cond_init(&POOL->hasWork, NULL) != 0 ||
-      pthread_cond_init(&POOL->workingDone, NULL) != 0) 
+  // - - - Initialize synchronization primitives
+  if (mtx_init(&POOL->lock, mtx_plain) != thrd_success ||
+      cnd_init(&POOL->hasWork) != thrd_success ||
+      cnd_init(&POOL->workingDone) != thrd_success) 
   {
-    FORGE_LOG_ERROR("[THREAD POOL] : Failed to initialize pthread synchronization primitives!");
-    if (!POOL->allocator) 
-    {
-      FORGE_FREE(POOL->threads);
-      FORGE_FREE(POOL->taskQueue);
-    }
+    JUST_LOG_FATAL("[THREAD POOL] : Failed to initialize C11 synchronization primitives!");
+    if (!POOL->allocator) JUST_FREE(POOL->threads);
+    justQueueDestroy(&POOL->taskQueue);
     return false;
   }
 
-  // - - - Spawn worker threads
+  // - - - Spawn worker threads 
   for (size_t i = 0; i < THREAD_COUNT; ++i) 
   {
-    if (pthread_create(&POOL->threads[i], NULL, workerThreadLoop, POOL) != 0) 
+    if (thrd_create(&POOL->threads[i], workerThreadLoop, POOL) != thrd_success) 
     {
-      FORGE_LOG_ERROR("[THREAD POOL] : Failed to spawn worker thread %zu", i);
-      forgeThreadpoolDestroy(POOL);
+      JUST_LOG_ERROR("[THREAD POOL] : Failed to spawn worker thread #%zu", i);
+      justThreadpoolDestroy(POOL);
       return false;
     }
+    POOL->threadCount++;
   }
 
-  FORGE_LOG_INFO("[THREAD POOL] : Created thread pool with %zu workers and queue capacity of %zu", 
-                  THREAD_COUNT, QUEUE_CAPACITY);
   return true;
 }
 
-bool forgeThreadpoolAddTask(
-  ForgeThreadPool*   POOL, 
-  ForgeTaskFunc FUNC, 
-  void*         ARG) 
+JUST_API bool justThreadpoolAddTask(
+  justThreadPool*  POOL, 
+  justTaskFunc     FUNC, 
+  void*            ARG) 
 {
-  FORGE_ASSERT_DEBUG_MESSAGE(POOL != NULL, "[THREAD POOL] : Cannot add task to NULL POOL");
-  FORGE_ASSERT_DEBUG_MESSAGE(FUNC != NULL, "[THREAD POOL] : Task FUNC cannot be NULL");
+  JUST_ASSERT_DEBUG_MESSAGE(POOL != NULL, "[THREAD POOL] : pool cannot be NULL");
+  JUST_ASSERT_DEBUG_MESSAGE(FUNC != NULL, "[THREAD POOL] : task func cannot be NULL");
 
-  pthread_mutex_lock(&POOL->lock);
+  mtx_lock(&POOL->lock);
 
-  if (POOL->shutdown || POOL->queueCount == POOL->queueCapacity) 
+  if (POOL->shutdown) 
   {
-    pthread_mutex_unlock(&POOL->lock);
-    FORGE_LOG_WARNING("[THREAD POOL] : Task rejected! Queue full or pool shutting down.");
+    mtx_unlock(&POOL->lock);
     return false;
   }
 
-  POOL->taskQueue[POOL->queueHead].func = FUNC;
-  POOL->taskQueue[POOL->queueHead].arg  = ARG;
-  POOL->queueHead                       = (POOL->queueHead + 1) % POOL->queueCapacity;
-  POOL->queueCount++;
+  justTask* slot = JUST_QUEUE_EMPLACE(&POOL->taskQueue, justTask);
+  if (!slot) 
+  {
+    mtx_unlock(&POOL->lock);
+    return false;
+  }
 
-  // - - - Signal sleeping worker thread
-  pthread_cond_signal(&POOL->hasWork);
-  pthread_mutex_unlock(&POOL->lock);
+  slot->func = FUNC;
+  slot->arg  = ARG;
+
+  cnd_signal(&POOL->hasWork);
+  mtx_unlock(&POOL->lock);
 
   return true;
 }
 
-void forgeThreadpoolWait(ForgeThreadPool* POOL) 
+JUST_API void justThreadpoolWait(justThreadPool* POOL) 
 {
-  FORGE_ASSERT_DEBUG_MESSAGE(POOL != NULL, "[THREAD POOL] : Cannot wait for a NULL POOL");
+  JUST_ASSERT_DEBUG_MESSAGE(POOL != NULL, "[THREAD POOL] : pool cannot be NULL");
 
-  pthread_mutex_lock(&POOL->lock);
-  while (POOL->queueCount > 0 || POOL->activeWorkers > 0) 
+  mtx_lock(&POOL->lock);
+  while (!justQueueIsEmpty(&POOL->taskQueue) || POOL->activeWorkers > 0) 
   {
-    pthread_cond_wait(&POOL->workingDone, &POOL->lock);
+    cnd_wait(&POOL->workingDone, &POOL->lock);
   }
-  pthread_mutex_unlock(&POOL->lock);
+  mtx_unlock(&POOL->lock);
 }
 
-void forgeThreadpoolDestroy(ForgeThreadPool* POOL) 
+JUST_API void justThreadpoolDestroy(justThreadPool* POOL) 
 {
-  FORGE_ASSERT_DEBUG_MESSAGE(POOL != NULL, "[THREAD POOL] : Cannot destroy a NULL POOL");
+  JUST_ASSERT_DEBUG_MESSAGE(POOL != NULL, "[THREAD POOL] : cannot destroy NULL POOL");
 
-  // - - - Wait for ongoing tasks to finish
-  forgeThreadpoolWait(POOL);
-
-  pthread_mutex_lock(&POOL->lock);
+  mtx_lock(&POOL->lock);
   POOL->shutdown = true;
-  pthread_cond_broadcast(&POOL->hasWork);
-  pthread_mutex_unlock(&POOL->lock);
+  cnd_broadcast(&POOL->hasWork);
+  mtx_unlock(&POOL->lock);
 
-  // - - - Join all worker threads
   for (size_t i = 0; i < POOL->threadCount; ++i) 
   {
-    pthread_join(POOL->threads[i], NULL);
+    thrd_join(POOL->threads[i], NULL);
   }
 
-  // - - - Destroy pthread primitives
-  pthread_mutex_destroy(&POOL->lock);
-  pthread_cond_destroy(&POOL->hasWork);
-  pthread_cond_destroy(&POOL->workingDone);
+  mtx_destroy(&POOL->lock);
+  cnd_destroy(&POOL->hasWork);
+  cnd_destroy(&POOL->workingDone);
 
-  if (!POOL->allocator) 
+  justQueueDestroy(&POOL->taskQueue);
+
+  if (!POOL->allocator && POOL->threads) 
   {
-    FORGE_FREE(POOL->threads);
-    FORGE_FREE(POOL->taskQueue);
+    JUST_FREE(POOL->threads);
   }
 
-  POOL->threads       = NULL;
-  POOL->taskQueue     = NULL;
-  POOL->threadCount   = 0;
-  POOL->queueCapacity = 0;
+  POOL->threads     = NULL;
+  POOL->threadCount = 0;
 }
 
-size_t forgeThreadpoolPendingTasks(ForgeThreadPool* POOL) 
+JUST_API size_t justThreadpoolPendingTasks(justThreadPool* POOL)
 {
-  FORGE_ASSERT_DEBUG_MESSAGE(POOL != NULL, "[THREAD POOL] : Cannot check pending tasks of a NULL POOL");
+  JUST_ASSERT_DEBUG_MESSAGE(POOL != NULL, "[THREAD POOL] : cannot check pending path NULL POOL");
 
-  if (!POOL) return 0;
-  pthread_mutex_lock(&POOL->lock);
-  size_t count = POOL->queueCount + POOL->activeWorkers;
-  pthread_mutex_unlock(&POOL->lock);
+  mtx_lock(&POOL->lock);
+  size_t count = justQueueSize(&POOL->taskQueue) + POOL->activeWorkers;
+  mtx_unlock(&POOL->lock);
+
   return count;
 }
-
-#endif

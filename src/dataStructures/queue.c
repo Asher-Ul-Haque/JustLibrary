@@ -1,79 +1,83 @@
-#include <forgeUtils/core/logger.h>
-#include <forgeUtils/memory/linearAlloc.h>
-#include <forgeUtils/dataStructures/queue.h>
-#include <forgeUtils/memory/tracker.h>
-#include <forgeUtils/core/asserts.h>
+#include <justUtils/core/logger.h>
+#include <justUtils/memory/linearAlloc.h>
+#include <justUtils/dataStructures/queue.h>
+#include <justUtils/memory/tracker.h>
+#include <justUtils/core/asserts.h>
 #include <stdint.h>
 #include <string.h>
 
-static inline size_t forgeRoundToPowerOfTwo(size_t VAL)
+static inline size_t justQueueRoundToPowerOfTwo(size_t n)
 {
-  if (VAL < FORGE_QUEUE_DEFAULT_CAPACITY) return FORGE_QUEUE_DEFAULT_CAPACITY;
-  VAL--;
-  VAL |= VAL >> 1;
-  VAL |= VAL >> 2;
-  VAL |= VAL >> 4;
-  VAL |= VAL >> 8;
-  VAL |= VAL >> 16;
+  if (n == 0) return 0;
+  if (n < JUST_QUEUE_DEFAULT_GROWTH_CAPACITY) return JUST_QUEUE_DEFAULT_GROWTH_CAPACITY;
+  n--;
+  n |= n >> 1;
+  n |= n >> 2;
+  n |= n >> 4;
+  n |= n >> 8;
+  n |= n >> 16;
 #if UINTPTR_MAX > 0xFFFFFFFF
-  VAL |= VAL >> 32;
+  n |= n >> 32;
 #endif
-  VAL++;
-  return VAL;
+  n++;
+  return n;
 }
 
-bool forgeQueueCreate(
-  ForgeQueue*           QUEUE,
+JUST_API bool justQueueCreate(
+  JustQueue*           QUEUE,
   size_t                INITIAL_CAPACITY,
   size_t                ELEMENT_SIZE,
-  ForgeLinearAllocator* ALLOCATOR)
+  justLinearAllocator* ALLOCATOR,
+  const char*           TAG)
 {
-  FORGE_ASSERT_DEBUG_MESSAGE(QUEUE != NULL, "[QUEUE] : Cannot create a NULL queue");
-  FORGE_ASSERT_DEBUG_MESSAGE(ELEMENT_SIZE > 0, "[QUEUE] : Cannot create a queue with 0 ELEMENT_SIZE");
+  JUST_ASSERT_DEBUG_MESSAGE(QUEUE != NULL, "[QUEUE] : Cannot create a NULL queue");
+  JUST_ASSERT_DEBUG_MESSAGE(ELEMENT_SIZE > 0, "[QUEUE] : Cannot create a queue with 0 ELEMENT_SIZE");
 
   QUEUE->head         = 0;
   QUEUE->tail         = 0;
   QUEUE->size         = 0;
-  QUEUE->capacity     = forgeRoundToPowerOfTwo(INITIAL_CAPACITY);
+  QUEUE->capacity     = justQueueRoundToPowerOfTwo(INITIAL_CAPACITY);
   QUEUE->elementSize  = ELEMENT_SIZE;
   QUEUE->mask         = QUEUE->capacity - 1;
+  QUEUE->tag          = TAG,
   QUEUE->allocator    = ALLOCATOR;
+  QUEUE->data         = NULL;
 
-  size_t totalBytes = QUEUE->capacity * QUEUE->elementSize;
+  if (QUEUE->capacity > 0)
+  {
+    size_t totalBytes = QUEUE->capacity * QUEUE->elementSize;
 
-  if (QUEUE->allocator)
-  {
-    QUEUE->data = (uint8_t*) forgeLinearAllocAllocate(QUEUE->allocator, totalBytes, 0);
-  }
-  else
-  {
-    QUEUE->data = (uint8_t*) FORGE_MALLOC(totalBytes);
-  }
+    if (QUEUE->allocator)
+    {
+      QUEUE->data = (uint8_t*)justLinearAllocAllocate(QUEUE->allocator, totalBytes, 0);
+    }
+    else
+    {
+      QUEUE->data = (uint8_t*) JUST_MALLOC_TAGGED(totalBytes, QUEUE->tag);
+    }
 
-  if (!QUEUE->data)
-  {
-    FORGE_LOG_ERROR("[QUEUE] : Failed to allocate initial queue buffer!");
-    QUEUE->capacity = 0;
-    QUEUE->mask     = 0;
-    return false;
+    if (!QUEUE->data)
+    {
+      JUST_LOG_ERROR("[QUEUE] : Failed to allocate initial buffer for %zu slots", QUEUE->capacity);
+      QUEUE->capacity = 0;
+      QUEUE->mask     = 0;
+      return false;
+    }
   }
 
   return true;
 }
 
-void forgeQueueDestroy(ForgeQueue* QUEUE)
+JUST_API void justQueueDestroy(JustQueue* QUEUE)
 {
-  FORGE_ASSERT_DEBUG_MESSAGE(QUEUE != NULL, "[QUEUE] : Cannot destroy a NULL queue");
+  JUST_ASSERT_DEBUG_MESSAGE(QUEUE != NULL, "[QUEUE] : Cannot destroy a NULL queue");
 
-  if (QUEUE->data)
+  if (QUEUE->data && !QUEUE->allocator)
   {
-    if (!QUEUE->allocator)
-    {
-      FORGE_FREE(QUEUE->data);
-    }
-    QUEUE->data = NULL;
+    JUST_FREE(QUEUE->data);
   }
 
+  QUEUE->data = NULL;
   QUEUE->capacity    = 0;
   QUEUE->mask        = 0;
   QUEUE->size        = 0;
@@ -83,98 +87,63 @@ void forgeQueueDestroy(ForgeQueue* QUEUE)
   QUEUE->allocator   = NULL;
 }
 
-bool __forgeQueueGrow(ForgeQueue* QUEUE)
+JUST_API bool justQueueReserve(JustQueue* QUEUE, size_t TARGET_CAPACITY)
 {
-  size_t    oldCap    = QUEUE->capacity;
-  size_t    newCap    = oldCap ? (oldCap * 2) : FORGE_QUEUE_DEFAULT_CAPACITY;
-  size_t    newBytes  = newCap * QUEUE->elementSize;
-  uint8_t*  newData   = NULL;
+  JUST_ASSERT_DEBUG_MESSAGE(QUEUE != NULL, "[QUEUE] : Cannot reserve size in a NULL QUEUE");
 
-  if (QUEUE->allocator)
+  size_t newCap = justQueueRoundToPowerOfTwo(TARGET_CAPACITY);
+
+  if (newCap < QUEUE->size)                             newCap = justQueueRoundToPowerOfTwo(QUEUE->size);
+  if (newCap == QUEUE->capacity && QUEUE->data != NULL) return true;
+
+  if (newCap == 0)
   {
-    newData = (uint8_t*) forgeLinearAllocAllocate(QUEUE->allocator, newBytes, 0);
+    if (QUEUE->data && !QUEUE->allocator)
+    {
+      if (QUEUE->data && !QUEUE->allocator) JUST_FREE(QUEUE->data);
+    }
+
+    QUEUE->data     = NULL;
+    QUEUE->capacity = 0;
+    QUEUE->mask     = 0;
+    QUEUE->head     = 0;
+    QUEUE->tail     = 0;
+
+    return true;
   }
-  else
-  {
-    newData = (uint8_t*) FORGE_MALLOC(newBytes);
-  }
+
+  size_t    totalBytes  = newCap * QUEUE->elementSize;
+  uint8_t*  newData     = QUEUE->allocator
+                          ? (uint8_t*) justLinearAllocAllocate(QUEUE->allocator, totalBytes, 0)
+                          : (uint8_t*) JUST_MALLOC_TAGGED(totalBytes, QUEUE->tag);
 
   if (!newData)
   {
-    FORGE_LOG_ERROR("[QUEUE] : Failed to allocate memory for queue expansion!");
+    JUST_LOG_ERROR("[QUEUE] : Failed to allcoate buffer for capacity %zu", newCap);
     return false;
   }
 
+  // - - - Linearize existing ring buffer into [0 ... size]
   if (QUEUE->data && QUEUE->size > 0)
   {
-    size_t firstPartCount = oldCap - QUEUE->head;
+    size_t firstPartCount = QUEUE->capacity - QUEUE->head;
     if (QUEUE->size <= firstPartCount)
     {
-      uint8_t* src = (uint8_t*)QUEUE->data + (QUEUE->head * QUEUE->elementSize);
-      memcpy(newData, src, QUEUE->size * QUEUE->elementSize);
+      memcpy(newData, QUEUE->data + (QUEUE->head * QUEUE->elementSize), QUEUE->size * QUEUE->elementSize);
     }
     else
     {
-      size_t firstPartBytes   = firstPartCount * QUEUE->elementSize;
-      size_t secondPartBytes  = (QUEUE->size - firstPartCount) * QUEUE->elementSize;
+      size_t firstPartBytes  = firstPartCount * QUEUE->elementSize;
+      size_t secondPartBytes = (QUEUE->size - firstPartCount) * QUEUE->elementSize;
 
-      memcpy(newData, (uint8_t*) QUEUE->data + (QUEUE->head * QUEUE->elementSize), firstPartBytes);
+      memcpy(newData, QUEUE->data + (QUEUE->head * QUEUE->elementSize), firstPartBytes);
       memcpy(newData + firstPartBytes, QUEUE->data, secondPartBytes);
     }
 
     if (!QUEUE->allocator)
     {
-      FORGE_FREE(QUEUE->data);
+      JUST_FREE(QUEUE->data);
     }
-  }
-
-  QUEUE->data     = newData;
-  QUEUE->head     = 0;
-  QUEUE->tail     = QUEUE->size;
-  QUEUE->capacity = newCap;
-  QUEUE->mask     = newCap - 1;
-
-  return true;
-}
-
-bool forgeQueueReserve(ForgeQueue* QUEUE, size_t TARGET_CAPACITY)
-{
-  FORGE_ASSERT_DEBUG_MESSAGE(QUEUE != NULL, "[QUEUE] : Cannot reserve size in a NULL QUEUE");
-
-  size_t newCap = forgeRoundToPowerOfTwo(TARGET_CAPACITY);
-
-  if (newCap < QUEUE->size)                             newCap = forgeRoundToPowerOfTwo(QUEUE->size);
-  if (newCap == QUEUE->capacity && QUEUE->data != NULL) return true;
-
-  size_t    newBytes  = newCap * QUEUE->elementSize;
-  uint8_t*  newData   = QUEUE->allocator 
-                       ? (uint8_t*) forgeLinearAllocAllocate(QUEUE->allocator, newBytes, 0)
-                       : (uint8_t*) FORGE_MALLOC(newBytes);
-
-  if (!newData)
-  {
-    FORGE_LOG_ERROR("[QUEUE] : Failed to allocate buffer for capacity %zu", newCap);
-    return false;
-  }
-
-  // - - - Unroll ring buffer into clean linear order [0 ... size)
-  if (QUEUE->data && QUEUE->size > 0)
-  {
-    size_t firstPart = QUEUE->capacity - QUEUE->head;
-    if (QUEUE->size <= firstPart)
-    {
-      memcpy(newData, (uint8_t*) QUEUE->data + (QUEUE->head * QUEUE->elementSize), QUEUE->size * QUEUE->elementSize);
-    }
-    else
-    {
-      size_t firstBytes   = firstPart * QUEUE->elementSize;
-      size_t secondBytes  = (QUEUE->size - firstPart) * QUEUE->elementSize;
-
-      memcpy(newData, (uint8_t*) QUEUE->data + (QUEUE->head * QUEUE->elementSize), firstBytes);
-      memcpy(newData + firstBytes, QUEUE->data, secondBytes);
-    }
-
-    if (!QUEUE->allocator) FORGE_FREE(QUEUE->data);
   }
 
   QUEUE->data     = newData;
