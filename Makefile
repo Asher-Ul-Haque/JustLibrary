@@ -1,6 +1,8 @@
 # - - - Build Configuration - - -
-MODE          ?= debug # Options : release, debug
-LIB_TYPE      ?= both  # Options : both, static, dynamic
+# Options : release, debug
+MODE          ?= debug
+# Options : both, static, dynamic
+LIB_TYPE      ?= both
 
 # - - - Directory Structure - - -
 INCLUDE_DIR   := include

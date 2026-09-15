@@ -96,7 +96,7 @@ JUST_API static inline void justBitsetSet(justBitset* SET, size_t INDEX)
  * @param SET : Pointer to the justBitset
  * @param INDEX : Which index to clear
 */
-JUST_API void justBitsetClear(justBitset* SET, size_t INDEX)
+JUST_API static inline void justBitsetClear(justBitset* SET, size_t INDEX)
 {
   JUST_ASSERT_DEBUG_MESSAGE(SET != NULL, "[BITSET] : Cannot set a bit in a NULL SET");
   JUST_ASSERT_DEBUG_MESSAGE(INDEX < SET->capacity, "[BITSET] : Index out of bounds");
