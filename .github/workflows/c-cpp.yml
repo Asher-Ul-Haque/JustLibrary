@@ -1,4 +1,4 @@
-name: CMake Build and Test
+name: Make Build and Test
 
 on:
   push:
@@ -21,10 +21,8 @@ jobs:
     - name: Checkout Code
       uses: actions/checkout@v4
 
-    - name: Configure CMake
-      # Configures the build and enables export of compile commands for debugging
-      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.build_type}}
+    - name: Build
+      run: make clean all MODE=$(echo "${{ matrix.build_type }}" | tr '[:upper:]' '[:lower:]')
 
-    - name: Build Library
-      # Compiles the C library
-      run: cmake --build ${{github.workspace}}/build --config ${{matrix.build_type}}
+    - name: Run Tests
+      run: make runTests MODE=$(echo "${{ matrix.build_type }}" | tr '[:upper:]' '[:lower:]')
