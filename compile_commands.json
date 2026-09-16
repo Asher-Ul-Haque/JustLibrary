@@ -1,1 +1,27 @@
-[]
+[
+  {
+    "arguments": [
+      "/usr/bin/clang",
+      "-Iinclude",
+      "-DDEBUG",
+      "-std=c11",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-Wpedantic",
+      "-fPIC",
+      "-fvisibility=hidden",
+      "-pthread",
+      "-O0",
+      "-g",
+      "-fno-omit-frame-pointer",
+      "-c",
+      "-o",
+      ".build/debug/tests/testMemory.o",
+      "tests/testMemory.c"
+    ],
+    "directory": "/home/asher/Documents/ForgeLibrary",
+    "file": "/home/asher/Documents/ForgeLibrary/tests/testMemory.c",
+    "output": "/home/asher/Documents/ForgeLibrary/.build/debug/tests/testMemory.o"
+  }
+]

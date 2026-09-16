@@ -16,12 +16,12 @@ BUILD_DIR     := .build/$(MODE)
 CC            := clang
 AR            := ar
 ARFLAGS       := rcs
-COMMON_FLAGS  := -std=c11 -Wall -Wextra -Werror -Wpedantic -fPIC -fvisibility=hidden -pthread
+COMMON_FLAGS  := -std=c11 -Wall -Wextra -Werror -Wpedantic -fPIC -fvisibility=hidden
 DEBUG_FLAGS   := -O0 -g -fno-omit-frame-pointer
 RELEASE_FLAGS := -O3
 
 CPPFLAGS      := -I$(INCLUDE_DIR) -MMD -MP
-LDFLAGS       := -L$(BIN_DIR) -Wl,-rpath,'$$ORIGIN/..' -Wl,-rpath,$(abspath $(BIN_DIR)) -ljust -lm -pthread
+LDFLAGS       := -L$(BIN_DIR) -Wl,-rpath,'$$ORIGIN/..' -Wl,-rpath,$(abspath $(BIN_DIR)) -ljust
 
 ifeq ($(MODE),debug)
   CFLAGS      := $(COMMON_FLAGS) $(DEBUG_FLAGS)

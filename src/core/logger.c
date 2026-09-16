@@ -60,10 +60,11 @@ static void writeConsole(const char* MESSAGE, LogLevel COLOR)
     default                 : colorStr = "0";       stream = stdout; break;
   }
 
-  #ifdef PRINT_LOG_COLORS    
+  #if PRINT_LOG_COLORS == 1
     fprintf(stream, "\033[%sm%s\033[0m\n", colorStr, MESSAGE);
   #else 
-    fprintf(stream, "%s", MESSAGE); // - - -This looks scary
+    (void) colorStr;
+    fprintf(stream, "%s\n", MESSAGE); // - - -This looks scary
   #endif
   /*Here is how it works:
   \033[     - This is the escape character
@@ -87,7 +88,6 @@ static void writeConsole(const char* MESSAGE, LogLevel COLOR)
  */
 JUST_API void justLogOutput(LogLevel LEVEL, const char* MESSAGE, ...)
 {
-  const char* levelStrings[6]   = {"[FATAL]: ", "[ERROR]: ", "[WARN]: ", "[INFO]: ", "[DEBUG]: ", "[TRACE]: "};
   const int   messageLength     = 1024 * 4;
   char        outputMessage     [messageLength];
   memset(outputMessage, 0, sizeof(outputMessage));
@@ -101,7 +101,8 @@ JUST_API void justLogOutput(LogLevel LEVEL, const char* MESSAGE, ...)
 
   // - - - Prepend with level header
   char finalMessage[messageLength];
-  #ifdef PRINT_LOG_TYPES
+  #if PRINT_LOG_TYPES == 1
+    const char* levelStrings[6]   = {"[FATAL]: ", "[ERROR]: ", "[WARN]: ", "[INFO]: ", "[DEBUG]: ", "[TRACE]: "};
     sprintf(finalMessage, "%s\t%s", levelStrings[LEVEL], outputMessage);
   #else 
     sprintf(finalMessage, "%s", outputMessage);

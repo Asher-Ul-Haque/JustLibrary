@@ -8,14 +8,15 @@
 
 bool justDynamicArrayCreate(
   justDynamicArray*    DARRAY,
-  size_t                INITIAL_CAPACITY,
-  size_t                ELEMENT_SIZE,
+  size_t               INITIAL_CAPACITY,
+  size_t               ELEMENT_SIZE,
   justLinearAllocator* ALLOCATOR,
-  const char*           TAG)
+  const char*          TAG)
 {
   JUST_ASSERT_DEBUG_MESSAGE(DARRAY != NULL, "[DYNAMIC DARRAY] : Cannot create a NULL DARRAY");
   JUST_ASSERT_DEBUG_MESSAGE(ELEMENT_SIZE > 0, "[DYNAMIC DARRAY] : Element size must be greater than 0");
 
+  DARRAY->data          = NULL;
   DARRAY->elementSize   = ELEMENT_SIZE;
   DARRAY->size          = 0;
   DARRAY->capacity      = INITIAL_CAPACITY;
@@ -86,8 +87,8 @@ bool justDynamicArrayReserve(justDynamicArray* DARRAY, size_t MIN_CAPACITY)
   }
   else
   {
-    if (DARRAY->data == NULL)  newData = JUST_MALLOC_TAGGED(newBytes, DARRAY->tag);
-    else                      newData = JUST_REALLOC(DARRAY->data, newBytes);
+    if (DARRAY->data == NULL) newData = (uint8_t*) JUST_MALLOC_TAGGED(newBytes, DARRAY->tag);
+    else                      newData = (uint8_t*) JUST_REALLOC(DARRAY->data, newBytes);
   }
 
   if (!newData)
@@ -165,7 +166,7 @@ bool justDynamicArrayShrinkToFit(justDynamicArray* DARRAY)
     return false;
   }
 
-  DARRAY->data     = newData;
+  DARRAY->data     = (uint8_t*) newData;
   DARRAY->capacity = DARRAY->size;
   return true;
 }

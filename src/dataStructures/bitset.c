@@ -6,9 +6,9 @@
 
 JUST_API bool justBitsetCreate(
   justBitset* SET,
-  size_t       CAPACITY,
-  void*        USER_BUFFER,
-  const char*  TAG)
+  size_t      CAPACITY,
+  void*       USER_BUFFER,
+  const char* TAG)
 {
   JUST_ASSERT_DEBUG_MESSAGE(SET != NULL, "[BITSET] : Target bitset cannot be NULL");
   JUST_ASSERT_DEBUG_MESSAGE(CAPACITY > 0, "[BITSET] : Capacity must be > 0");
@@ -78,9 +78,9 @@ JUST_API void justBitsetUnion(justBitset* DST, const justBitset* SRC)
 {
   JUST_ASSERT_DEBUG_MESSAGE(DST != NULL && SRC != NULL, "[BITSET] : Cannot union NULL sets");
 
-  size_t                    count = (DST->wordCount < SRC->wordCount) ? DST->wordCount : SRC->wordCount;
-  uint64_t* restrict        d     = DST->words;
-  const uint64_t* restrict  s     = SRC->words;
+  size_t                        count = (DST->wordCount < SRC->wordCount) ? DST->wordCount : SRC->wordCount;
+  uint64_t*       JUST_RESTRICT d     = DST->words;
+  const uint64_t* JUST_RESTRICT s     = SRC->words;
 
   for (size_t i = 0; i < count; ++i)
   {
@@ -92,9 +92,9 @@ JUST_API void justBitsetIntersection(justBitset* DST, const justBitset* SRC)
 {
   JUST_ASSERT_DEBUG_MESSAGE(DST != NULL && SRC != NULL, "[BITSET] : Cannot intersect NULL bitsets");
 
-  size_t                    count = (DST->wordCount < SRC->wordCount) ? DST->wordCount : SRC->wordCount;
-  uint64_t* restrict        d     = DST->words;
-  const uint64_t* restrict  s     = SRC->words;
+  size_t                        count = (DST->wordCount < SRC->wordCount) ? DST->wordCount : SRC->wordCount;
+  uint64_t*       JUST_RESTRICT d     = DST->words;
+  const uint64_t* JUST_RESTRICT s     = SRC->words;
 
   for (size_t i = 0; i < count; ++i)
   {
@@ -106,9 +106,9 @@ JUST_API void justBitsetDifference(justBitset* DST, const justBitset* SRC)
 {
   JUST_ASSERT_DEBUG_MESSAGE(DST != NULL && SRC != NULL, "[BITSET] : Cannot difference NULL bitsets");
 
-  size_t                    count = (DST->wordCount < SRC->wordCount) ? DST->wordCount : SRC->wordCount;
-  uint64_t* restrict        d     = DST->words;
-  const uint64_t* restrict  s     = SRC->words;
+  size_t                        count = (DST->wordCount < SRC->wordCount) ? DST->wordCount : SRC->wordCount;
+  uint64_t*       JUST_RESTRICT d     = DST->words;
+  const uint64_t* JUST_RESTRICT s     = SRC->words;
 
   for (size_t i = 0; i < count; ++i)
   {

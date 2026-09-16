@@ -64,11 +64,11 @@ extern "C" {
 #endif 
 
 #ifndef PRINT_LOG_TYPES
-  #define PRINT_LOG_TYPES
+  #define PRINT_LOG_TYPES 1
 #endif
 
 #ifndef PRINT_LOG_COLORS
-  #define PRINT_LOG_COLORS
+  #define PRINT_LOG_COLORS 1
 #endif
 
 
@@ -90,6 +90,7 @@ typedef enum LogLevel
 
 JUST_API void justLogOutput(LogLevel LEVEL, const char* MESSAGE, ...); // - - - Multivariate, takes any number of arguments greater than 1
 
+static inline void justLogNoOp(const char* NOTHING, ...) { (void)NOTHING; }
 
 // - - - Fatal log
 #define JUST_LOG_FATAL(...) justLogOutput(LOG_LEVEL_FATAL, __VA_ARGS__, "%s", "");
@@ -101,25 +102,25 @@ JUST_API void justLogOutput(LogLevel LEVEL, const char* MESSAGE, ...); // - - - 
 #ifdef LOG_WARNING_ENABLED
   #define JUST_LOG_WARNING(...) justLogOutput(LOG_LEVEL_WARNING, __VA_ARGS__, "%s", "");
 #else
-  #define JUST_LOG_WARNING(...)
+  #define JUST_LOG_WARNING(...) justLogNoOp(__VA_ARGS__)
 #endif
 
 #ifdef LOG_INFO_ENABLED
-  #define JUST_LOG_INFO(...) justLogOutput(LOG_LEVEL_INFO, __VA_ARGS__, "%s", "");
+  #define JUST_LOG_INFO(...) justLogOutput(LOG_LEVEL_INFO, __VA_ARGS__, "%s", "")
 #else
-  #define JUST_LOG_INFO(...)
+  #define JUST_LOG_INFO(...)  justLogNoOp(__VA_ARGS__)
 #endif
 
 #ifdef LOG_DEBUG_ENABLED
-  #define JUST_LOG_DEBUG(...) justLogOutput(LOG_LEVEL_DEBUG, __VA_ARGS__, "%s", "");
+  #define JUST_LOG_DEBUG(...) justLogOutput(LOG_LEVEL_DEBUG, __VA_ARGS__, "%s", "")
 #else
-  #define JUST_LOG_DEBUG(...)
+  #define JUST_LOG_DEBUG(...) justLogNoOp(__VA_ARGS__)
 #endif
 
 #ifdef LOG_TRACE_ENABLED
-  #define JUST_LOG_TRACE(...) justLogOutput(LOG_LEVEL_TRACE, __VA_ARGS__, "%s", "");
+  #define JUST_LOG_TRACE(...) justLogOutput(LOG_LEVEL_TRACE, __VA_ARGS__, "%s", "")
 #else
-  #define JUST_LOG_TRACE(...)
+  #define JUST_LOG_TRACE(...) justLogNoOp(__VA_ARGS__)
 #endif
 
 #define JUST_LOG_CLEAR() printf("\033[H\033[J")

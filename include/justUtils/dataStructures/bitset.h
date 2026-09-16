@@ -202,3 +202,7 @@ JUST_API void justBitsetDifference(justBitset* DST, const justBitset* SRC);
  * @return : True if identical in capacity and set bits, false otherwise
  */
 JUST_API bool justBitsetEquals(const justBitset* A, const justBitset* B);
+
+#ifdef __cplusplus
+}
+#endif

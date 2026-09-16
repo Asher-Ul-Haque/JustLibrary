@@ -28,7 +28,7 @@
 */
 
 /// @brief : If IMPL_ALL is defined, include every system
-#ifndef JUST_LIB_IMPL_ALL
+#ifdef JUST_LIB_IMPL_ALL
   #ifndef JUST_LIB_IMPL_MEMORY
     #define JUST_LIB_IMPL_MEMORY
   #endif
@@ -183,6 +183,15 @@ extern "C" {
   #define JUST_LOCAL __attribute__((visibility("hidden")))
 #endif
 
+// - - - Cplus ki mkc
+#if defined(__cplusplus)
+  #define JUST_RESTRICT __restrict
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
+  #define JUST_RESTRICT restrict
+#else
+  #define JUST_RESTRICT
+#endif
+
 #ifdef __cplusplus
 }
 #endif
@@ -237,11 +246,11 @@ extern "C" {
 #endif 
 
 #ifndef PRINT_LOG_TYPES
-  #define PRINT_LOG_TYPES
+  #define PRINT_LOG_TYPES 1
 #endif
 
 #ifndef PRINT_LOG_COLORS
-  #define PRINT_LOG_COLORS
+  #define PRINT_LOG_COLORS 1
 #endif
 
 
@@ -263,6 +272,7 @@ typedef enum LogLevel
 
 JUST_API void justLogOutput(LogLevel LEVEL, const char* MESSAGE, ...); // - - - Multivariate, takes any number of arguments greater than 1
 
+static inline void justLogNoOp(const char* NOTHING, ...) { (void)NOTHING; }
 
 // - - - Fatal log
 #define JUST_LOG_FATAL(...) justLogOutput(LOG_LEVEL_FATAL, __VA_ARGS__, "%s", "");
@@ -274,25 +284,25 @@ JUST_API void justLogOutput(LogLevel LEVEL, const char* MESSAGE, ...); // - - - 
 #ifdef LOG_WARNING_ENABLED
   #define JUST_LOG_WARNING(...) justLogOutput(LOG_LEVEL_WARNING, __VA_ARGS__, "%s", "");
 #else
-  #define JUST_LOG_WARNING(...)
+  #define JUST_LOG_WARNING(...) justLogNoOp(__VA_ARGS__)
 #endif
 
 #ifdef LOG_INFO_ENABLED
-  #define JUST_LOG_INFO(...) justLogOutput(LOG_LEVEL_INFO, __VA_ARGS__, "%s", "");
+  #define JUST_LOG_INFO(...) justLogOutput(LOG_LEVEL_INFO, __VA_ARGS__, "%s", "")
 #else
-  #define JUST_LOG_INFO(...)
+  #define JUST_LOG_INFO(...)  justLogNoOp(__VA_ARGS__)
 #endif
 
 #ifdef LOG_DEBUG_ENABLED
-  #define JUST_LOG_DEBUG(...) justLogOutput(LOG_LEVEL_DEBUG, __VA_ARGS__, "%s", "");
+  #define JUST_LOG_DEBUG(...) justLogOutput(LOG_LEVEL_DEBUG, __VA_ARGS__, "%s", "")
 #else
-  #define JUST_LOG_DEBUG(...)
+  #define JUST_LOG_DEBUG(...) justLogNoOp(__VA_ARGS__)
 #endif
 
 #ifdef LOG_TRACE_ENABLED
-  #define JUST_LOG_TRACE(...) justLogOutput(LOG_LEVEL_TRACE, __VA_ARGS__, "%s", "");
+  #define JUST_LOG_TRACE(...) justLogOutput(LOG_LEVEL_TRACE, __VA_ARGS__, "%s", "")
 #else
-  #define JUST_LOG_TRACE(...)
+  #define JUST_LOG_TRACE(...) justLogNoOp(__VA_ARGS__)
 #endif
 
 #define JUST_LOG_CLEAR() printf("\033[H\033[J")
@@ -343,10 +353,11 @@ static void writeConsole(const char* MESSAGE, LogLevel COLOR)
     default                 : colorStr = "0";       stream = stdout; break;
   }
 
-  #ifdef PRINT_LOG_COLORS    
+  #if PRINT_LOG_COLORS == 1
     fprintf(stream, "\033[%sm%s\033[0m\n", colorStr, MESSAGE);
   #else 
-    fprintf(stream, "%s", MESSAGE); // - - -This looks scary
+    (void) colorStr;
+    fprintf(stream, "%s\n", MESSAGE); // - - -This looks scary
   #endif
   /*Here is how it works:
   \033[     - This is the escape character
@@ -370,7 +381,6 @@ static void writeConsole(const char* MESSAGE, LogLevel COLOR)
  */
 JUST_API void justLogOutput(LogLevel LEVEL, const char* MESSAGE, ...)
 {
-  const char* levelStrings[6]   = {"[FATAL]: ", "[ERROR]: ", "[WARN]: ", "[INFO]: ", "[DEBUG]: ", "[TRACE]: "};
   const int   messageLength     = 1024 * 4;
   char        outputMessage     [messageLength];
   memset(outputMessage, 0, sizeof(outputMessage));
@@ -384,7 +394,8 @@ JUST_API void justLogOutput(LogLevel LEVEL, const char* MESSAGE, ...)
 
   // - - - Prepend with level header
   char finalMessage[messageLength];
-  #ifdef PRINT_LOG_TYPES
+  #if PRINT_LOG_TYPES == 1
+    const char* levelStrings[6]   = {"[FATAL]: ", "[ERROR]: ", "[WARN]: ", "[INFO]: ", "[DEBUG]: ", "[TRACE]: "};
     sprintf(finalMessage, "%s\t%s", levelStrings[LEVEL], outputMessage);
   #else 
     sprintf(finalMessage, "%s", outputMessage);
@@ -710,7 +721,7 @@ JUST_API void justMemoryReportLeaks(void);
  * @param TAG : The tag for which you want to check memory, set it to MEMORY_TAG_COUNT to get all
  * @return : total active allocated bytes in use
  */
-JUST_API size_t memoryGetActiveBytes(const char* TAG);
+JUST_API size_t justMemoryGetActiveBytes(const char* TAG);
 
 /**
  * @brief : Returns the memory allocated as a string,
@@ -718,7 +729,7 @@ JUST_API size_t memoryGetActiveBytes(const char* TAG);
  * @warning : just for debugging, not for actually parsing memory usage
  * @see : memoryGetActiveBytes for better usage API
 */
-JUST_API void memoryLogUsageStr(bool VERBOSE);
+JUST_API void justMemoryLogUsageStr(bool VERBOSE);
 
 /**
  * @brief : Sets a limit on the memory allocation of a particular type
@@ -727,13 +738,13 @@ JUST_API void memoryLogUsageStr(bool VERBOSE);
  * @param LIMIT : The limit you want to set in bytes
  * @param TAG : What do you want to set the limit for
 */
-JUST_API void memorySetLimit(size_t LIMIT, const char* TAG);
+JUST_API void justMemorySetLimit(size_t LIMIT, const char* TAG);
 
 /**
  * @brief : Returns the memory allocation limit
  * @warning : TAG must be valid
 */
-JUST_API size_t memoryGetLimit(const char* TAG);
+JUST_API size_t justMemoryGetLimit(const char* TAG);
 
 // - - - Optional Macro Overrides for Debug Mode
 #ifdef DEBUG
@@ -744,10 +755,10 @@ JUST_API size_t memoryGetLimit(const char* TAG);
   #define JUST_REALLOC(ptr, size)              justTrackedRealloc((ptr), (size), __FILE__, __func__, __LINE__)
   #define JUST_FREE(ptr)                       justTrackedFree((ptr), __FILE__, __func__, __LINE__)
 #else
-  #define JUST_MALLOC_TAGGED(size, tag)        malloc((size))
-  #define JUST_CALLOC_TAGGED(count, size, tag) calloc((count), (size))
-  #define JUST_MALLOC(size, tag)               malloc((size))
-  #define JUST_CALLOC(count, size, tag)        calloc((count), (size))
+  #define JUST_MALLOC_TAGGED(size, tag)        ((void)(tag), malloc((size)))
+  #define JUST_CALLOC_TAGGED(count, size, tag) ((void)(tag), calloc((count), (size)))
+  #define JUST_MALLOC(size)                    malloc((size))
+  #define JUST_CALLOC(count, size)             calloc((count), (size))
   #define JUST_REALLOC(ptr, size)              realloc((ptr), (size))
   #define JUST_FREE(ptr)                       free((ptr))
 #endif
@@ -1084,10 +1095,10 @@ JUST_API bool justMemoryCheckBounds(void)
   return clean;
 }
 
-JUST_API void justMemorySetLimit(const char* TAG, size_t LIMIT_BYTES)
+JUST_API void justMemorySetLimit(size_t LIMIT_BYTES, const char* TAG)
 {
   justTagEntry* entry     = getOrCreateTag(TAG);
-  entry->allocationLimit  = LIMIT_BYTES;
+  entry->allocationLimit  = LIMIT_BYTES == 0 ? SIZE_MAX : LIMIT_BYTES;
 }
 
 JUST_API size_t justMemoryGetLimit(const char* TAG)
@@ -1119,6 +1130,9 @@ JUST_API void justMemoryLogUsage(bool VERBOSE)
       double pct = (double)e->allocatedBytes / (double)e->allocationLimit * 100.0;
       JUST_LOG_INFO("  ├── Tag: %-16s | %zu / %zu bytes (%.1f%%) [%zu active]",
                      e->name, e->allocatedBytes, e->allocationLimit, pct, e->activeCount);
+      #ifndef DEBUG
+        (void) pct;
+      #endif
     }
     else
     {
@@ -1622,6 +1636,10 @@ JUST_API void justBitsetDifference(justBitset* DST, const justBitset* SRC);
  */
 JUST_API bool justBitsetEquals(const justBitset* A, const justBitset* B);
 
+#ifdef __cplusplus
+}
+#endif
+
 #endif // JUST_BITSET
 
 // - - - Implementation
@@ -1704,9 +1722,9 @@ JUST_API void justBitsetUnion(justBitset* DST, const justBitset* SRC)
 {
   JUST_ASSERT_DEBUG_MESSAGE(DST != NULL && SRC != NULL, "[BITSET] : Cannot union NULL sets");
 
-  size_t                    count = (DST->wordCount < SRC->wordCount) ? DST->wordCount : SRC->wordCount;
-  uint64_t* restrict        d     = DST->words;
-  const uint64_t* restrict  s     = SRC->words;
+  size_t                        count = (DST->wordCount < SRC->wordCount) ? DST->wordCount : SRC->wordCount;
+  uint64_t* JUST_RESTRICT       d     = DST->words;
+  const uint64_t* JUST_RESTRICT s     = SRC->words;
 
   for (size_t i = 0; i < count; ++i)
   {
@@ -1718,9 +1736,9 @@ JUST_API void justBitsetIntersection(justBitset* DST, const justBitset* SRC)
 {
   JUST_ASSERT_DEBUG_MESSAGE(DST != NULL && SRC != NULL, "[BITSET] : Cannot intersect NULL bitsets");
 
-  size_t                    count = (DST->wordCount < SRC->wordCount) ? DST->wordCount : SRC->wordCount;
-  uint64_t* restrict        d     = DST->words;
-  const uint64_t* restrict  s     = SRC->words;
+  size_t                        count = (DST->wordCount < SRC->wordCount) ? DST->wordCount : SRC->wordCount;
+  uint64_t*       JUST_RESTRICT d     = DST->words;
+  const uint64_t* JUST_RESTRICT s     = SRC->words;
 
   for (size_t i = 0; i < count; ++i)
   {
@@ -1732,9 +1750,9 @@ JUST_API void justBitsetDifference(justBitset* DST, const justBitset* SRC)
 {
   JUST_ASSERT_DEBUG_MESSAGE(DST != NULL && SRC != NULL, "[BITSET] : Cannot difference NULL bitsets");
 
-  size_t                    count = (DST->wordCount < SRC->wordCount) ? DST->wordCount : SRC->wordCount;
-  uint64_t* restrict        d     = DST->words;
-  const uint64_t* restrict  s     = SRC->words;
+  size_t                        count = (DST->wordCount < SRC->wordCount) ? DST->wordCount : SRC->wordCount;
+  uint64_t*       JUST_RESTRICT d     = DST->words;
+  const uint64_t* JUST_RESTRICT s     = SRC->words;
 
   for (size_t i = 0; i < count; ++i)
   {
@@ -1982,6 +2000,8 @@ void* justObjectPoolTakeObject(justObjectPool* POOL)
     JUST_ASSERT_DEBUG_MESSAGE(!justBitsetGet(&POOL->allocatedBits, slotIndex),
                              "[OBJECT POOL] : Internal invariant failure: taking already allocated slot");
     justBitsetSet(&POOL->allocatedBits, slotIndex);
+  #else
+    (void) slotIndex;
   #endif
 
   return (void*)objAddr;
@@ -2004,11 +2024,13 @@ void justObjectPoolReturnObject(justObjectPool* POOL, void* OBJECT)
 
   size_t slotIndex = byteOffset / POOL->stride;
 
-#ifdef DEBUG
-  JUST_ASSERT_DEBUG_MESSAGE(justBitsetGet(&POOL->allocatedBits, slotIndex),
-                             "[OBJECT POOL] : Double-free detected! Slot was not active or already returned");
-  justBitsetClear(&POOL->allocatedBits, slotIndex);
-#endif
+  #ifdef DEBUG
+    JUST_ASSERT_DEBUG_MESSAGE(justBitsetGet(&POOL->allocatedBits, slotIndex),
+                              "[OBJECT POOL] : Double-free detected! Slot was not active or already returned");
+    justBitsetClear(&POOL->allocatedBits, slotIndex);
+  #else
+    (void) slotIndex;
+  #endif
 
   // - - - Push back onto head of free list
   *(size_t*)OBJECT      = POOL->freeListOffset;
@@ -2367,6 +2389,7 @@ bool justDynamicArrayCreate(
   JUST_ASSERT_DEBUG_MESSAGE(DARRAY != NULL, "[DYNAMIC DARRAY] : Cannot create a NULL DARRAY");
   JUST_ASSERT_DEBUG_MESSAGE(ELEMENT_SIZE > 0, "[DYNAMIC DARRAY] : Element size must be greater than 0");
 
+  DARRAY->data          = NULL;
   DARRAY->elementSize   = ELEMENT_SIZE;
   DARRAY->size          = 0;
   DARRAY->capacity      = INITIAL_CAPACITY;
@@ -2437,8 +2460,8 @@ bool justDynamicArrayReserve(justDynamicArray* DARRAY, size_t MIN_CAPACITY)
   }
   else
   {
-    if (DARRAY->data == NULL)  newData = JUST_MALLOC_TAGGED(newBytes, DARRAY->tag);
-    else                      newData = JUST_REALLOC(DARRAY->data, newBytes);
+    if (DARRAY->data == NULL) newData = (uint8_t*) JUST_MALLOC_TAGGED(newBytes, DARRAY->tag);
+    else                      newData = (uint8_t*) JUST_REALLOC(DARRAY->data, newBytes);
   }
 
   if (!newData)
@@ -2516,7 +2539,7 @@ bool justDynamicArrayShrinkToFit(justDynamicArray* DARRAY)
     return false;
   }
 
-  DARRAY->data     = newData;
+  DARRAY->data     = (uint8_t*) newData;
   DARRAY->capacity = DARRAY->size;
   return true;
 }
@@ -2571,10 +2594,10 @@ typedef struct justStack
 */
 JUST_API static inline bool justStackCreate(
   JustStack*           STACK,
-  size_t                INITIAL_CAPACITY,
-  size_t                ELEMENT_SIZE,
+  size_t               INITIAL_CAPACITY,
+  size_t               ELEMENT_SIZE,
   justLinearAllocator* ALLOCATOR,
-  const char*           TAG)
+  const char*          TAG)
 {
   JUST_ASSERT_DEBUG_MESSAGE(STACK != NULL, "[STACK] : Cannot create a NULL STACK");
   JUST_ASSERT_DEBUG_MESSAGE(ELEMENT_SIZE > 0, "[STACK] : Element size must be greater than 0");

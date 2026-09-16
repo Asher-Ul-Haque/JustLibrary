@@ -129,6 +129,8 @@ void* justObjectPoolTakeObject(justObjectPool* POOL)
     JUST_ASSERT_DEBUG_MESSAGE(!justBitsetGet(&POOL->allocatedBits, slotIndex),
                              "[OBJECT POOL] : Internal invariant failure: taking already allocated slot");
     justBitsetSet(&POOL->allocatedBits, slotIndex);
+  #else
+    (void) slotIndex;
   #endif
 
   return (void*)objAddr;
@@ -151,11 +153,13 @@ void justObjectPoolReturnObject(justObjectPool* POOL, void* OBJECT)
 
   size_t slotIndex = byteOffset / POOL->stride;
 
-#ifdef DEBUG
-  JUST_ASSERT_DEBUG_MESSAGE(justBitsetGet(&POOL->allocatedBits, slotIndex),
-                             "[OBJECT POOL] : Double-free detected! Slot was not active or already returned");
-  justBitsetClear(&POOL->allocatedBits, slotIndex);
-#endif
+  #ifdef DEBUG
+    JUST_ASSERT_DEBUG_MESSAGE(justBitsetGet(&POOL->allocatedBits, slotIndex),
+                              "[OBJECT POOL] : Double-free detected! Slot was not active or already returned");
+    justBitsetClear(&POOL->allocatedBits, slotIndex);
+  #else
+    (void) slotIndex;
+  #endif
 
   // - - - Push back onto head of free list
   *(size_t*)OBJECT      = POOL->freeListOffset;

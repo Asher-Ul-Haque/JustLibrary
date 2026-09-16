@@ -71,6 +71,15 @@ extern "C" {
   #define JUST_LOCAL __attribute__((visibility("hidden")))
 #endif
 
+// - - - Cplus ki mkc
+#if defined(__cplusplus)
+  #define JUST_RESTRICT __restrict
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
+  #define JUST_RESTRICT restrict
+#else
+  #define JUST_RESTRICT
+#endif
+
 #ifdef __cplusplus
 }
 #endif

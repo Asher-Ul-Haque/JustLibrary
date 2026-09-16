@@ -12,7 +12,7 @@ static inline bool justlinearAllocIsPowerOfTwo(size_t X)
 }
 
 bool justLinearAllocCreate(
-  justLinearAllocator* ALLOCATOR,
+  justLinearAllocator*  ALLOCATOR,
   size_t                TOTAL_SIZE,
   void*                 USER_BUFFER,
   const char*           TAG)
@@ -26,7 +26,7 @@ bool justLinearAllocCreate(
 
   if (ALLOCATOR->ownsMemory)
   {
-    const char* allocTag = (TAG && TAG[0] != '\0') ? TAG : "LINEAR_ALLOC_BUFFER";
+    const char* allocTag = TAG;
     ALLOCATOR->memory = JUST_MALLOC_TAGGED(TOTAL_SIZE, allocTag);
 
     if (!ALLOCATOR->memory)
@@ -64,7 +64,7 @@ void justLinearAllocDestroy(justLinearAllocator* ALLOCATOR)
 }
 
 void* justLinearAllocAllocate(
-  justLinearAllocator* ALLOCATOR, 
+  justLinearAllocator*  ALLOCATOR, 
   size_t                SIZE, 
   size_t                ALIGNMENT)
 {

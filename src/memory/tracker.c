@@ -327,10 +327,10 @@ JUST_API bool justMemoryCheckBounds(void)
   return clean;
 }
 
-JUST_API void justMemorySetLimit(const char* TAG, size_t LIMIT_BYTES)
+JUST_API void justMemorySetLimit(size_t LIMIT_BYTES, const char* TAG)
 {
   justTagEntry* entry     = getOrCreateTag(TAG);
-  entry->allocationLimit  = LIMIT_BYTES;
+  entry->allocationLimit  = LIMIT_BYTES == 0 ? SIZE_MAX : LIMIT_BYTES;
 }
 
 JUST_API size_t justMemoryGetLimit(const char* TAG)
@@ -362,6 +362,9 @@ JUST_API void justMemoryLogUsage(bool VERBOSE)
       double pct = (double)e->allocatedBytes / (double)e->allocationLimit * 100.0;
       JUST_LOG_INFO("  ├── Tag: %-16s | %zu / %zu bytes (%.1f%%) [%zu active]",
                      e->name, e->allocatedBytes, e->allocationLimit, pct, e->activeCount);
+      #ifndef DEBUG
+        (void) pct;
+      #endif
     }
     else
     {

@@ -24,7 +24,7 @@ typedef struct justTestGroup
 } justTestGroup;
 
 static justTestGroup testGroups[JUST_MAX_TEST_GROUPS];
-static size_t         maxGroupID = 0;
+static size_t        maxGroupID = 0;
 
 JUST_API void justTestRegister(justTestFunc TEST_FUNC, const char* DESCRIPTION, uint8_t GROUP_ID) 
 {
@@ -107,7 +107,7 @@ JUST_API size_t justTestRunAll(void)
     justTestGroup* group = &testGroups[g];
     if (group->count == 0) continue;
 
-    JUST_LOG_INFO("\n--- [TEST GROUP %zu] ---", g);
+    JUST_LOG_INFO("\n\n\n--- [TEST GROUP %zu] ---", g);
 
     for (size_t i = 0; i < group->count; ++i) 
     {
@@ -115,7 +115,7 @@ JUST_API size_t justTestRunAll(void)
       totalTests++;
 
       JustTestResult result          = JUST_TEST_FAIL;
-      bool            executedSafely  = true;
+      bool           executedSafely  = true;
 
     #if !defined(_WIN32)
       executedSafely = runTestForked(test, &result);
@@ -126,27 +126,27 @@ JUST_API size_t justTestRunAll(void)
       if (!executedSafely) 
       {
         crashedTests++;
-        JUST_LOG_ERROR("  [CRASHED] %s", test.description);
+        JUST_LOG_ERROR("  [CRASHED] %s\n", test.description);
       } 
       else if (result == JUST_TEST_PASS) 
       {
         passedTests++;
-        JUST_LOG_INFO("  [PASS]    %s", test.description);
+        JUST_LOG_INFO("  [PASS]    %s\n", test.description);
       } 
       else if (result == JUST_TEST_SKIP) 
       {
         skippedTests++;
-        JUST_LOG_WARNING("  [SKIP]    %s", test.description);
+        JUST_LOG_WARNING("  [SKIP]    %s\n", test.description);
       } 
       else 
       {
         failedTests++;
-        JUST_LOG_ERROR("  [FAIL]    %s", test.description);
+        JUST_LOG_ERROR("  [FAIL]    %s\n", test.description);
       }
     }
   }
 
-  JUST_LOG_INFO("\n==================================================");
+  JUST_LOG_INFO("==================================================");
   JUST_LOG_INFO("                  TEST SUMMARY                    ");
   JUST_LOG_INFO("==================================================");
   JUST_LOG_INFO(" Total Executed : %zu", totalTests);

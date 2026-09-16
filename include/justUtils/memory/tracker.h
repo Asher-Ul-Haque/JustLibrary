@@ -120,7 +120,7 @@ JUST_API void justMemoryReportLeaks(void);
  * @param TAG : The tag for which you want to check memory, set it to MEMORY_TAG_COUNT to get all
  * @return : total active allocated bytes in use
  */
-JUST_API size_t memoryGetActiveBytes(const char* TAG);
+JUST_API size_t justMemoryGetActiveBytes(const char* TAG);
 
 /**
  * @brief : Returns the memory allocated as a string,
@@ -128,7 +128,7 @@ JUST_API size_t memoryGetActiveBytes(const char* TAG);
  * @warning : just for debugging, not for actually parsing memory usage
  * @see : memoryGetActiveBytes for better usage API
 */
-JUST_API void memoryLogUsageStr(bool VERBOSE);
+JUST_API void justMemoryLogUsageStr(bool VERBOSE);
 
 /**
  * @brief : Sets a limit on the memory allocation of a particular type
@@ -137,13 +137,13 @@ JUST_API void memoryLogUsageStr(bool VERBOSE);
  * @param LIMIT : The limit you want to set in bytes
  * @param TAG : What do you want to set the limit for
 */
-JUST_API void memorySetLimit(size_t LIMIT, const char* TAG);
+JUST_API void justMemorySetLimit(size_t LIMIT, const char* TAG);
 
 /**
  * @brief : Returns the memory allocation limit
  * @warning : TAG must be valid
 */
-JUST_API size_t memoryGetLimit(const char* TAG);
+JUST_API size_t justMemoryGetLimit(const char* TAG);
 
 // - - - Optional Macro Overrides for Debug Mode
 #ifdef DEBUG
@@ -154,10 +154,10 @@ JUST_API size_t memoryGetLimit(const char* TAG);
   #define JUST_REALLOC(ptr, size)              justTrackedRealloc((ptr), (size), __FILE__, __func__, __LINE__)
   #define JUST_FREE(ptr)                       justTrackedFree((ptr), __FILE__, __func__, __LINE__)
 #else
-  #define JUST_MALLOC_TAGGED(size, tag)        malloc((size))
-  #define JUST_CALLOC_TAGGED(count, size, tag) calloc((count), (size))
-  #define JUST_MALLOC(size, tag)               malloc((size))
-  #define JUST_CALLOC(count, size, tag)        calloc((count), (size))
+  #define JUST_MALLOC_TAGGED(size, tag)        ((void)(tag), malloc((size)))
+  #define JUST_CALLOC_TAGGED(count, size, tag) ((void)(tag), calloc((count), (size)))
+  #define JUST_MALLOC(size)                    malloc((size))
+  #define JUST_CALLOC(count, size)             calloc((count), (size))
   #define JUST_REALLOC(ptr, size)              realloc((ptr), (size))
   #define JUST_FREE(ptr)                       free((ptr))
 #endif
