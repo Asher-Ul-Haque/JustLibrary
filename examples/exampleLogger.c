@@ -4,7 +4,7 @@
 // Uncomment to not see colors
 //#define PRINT_LOG_COLORS 0
 
-#include <justUtils/justLibrary.h>
+#include <justUtils/core/logger.h>
 
 /**
  * @file exampleLogger.c

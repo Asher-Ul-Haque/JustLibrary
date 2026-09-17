@@ -11,7 +11,8 @@
 // #define TRIGGER_TODO_COMMENT
 // #define TRIGGER_COMPILE_TIME_FAIL
 
-#include <justUtils/justLibrary.h>
+#include <justUtils/core/logger.h>
+#include <justUtils/core/asserts.h>
 
 // - - - Compile-Time Assertions (Evaluated at compilation)
 JUST_COMPILE_TIME_ASSERT(sizeof(uint32_t) == 4);
