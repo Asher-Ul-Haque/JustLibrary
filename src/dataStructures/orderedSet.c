@@ -241,7 +241,7 @@ JUST_API bool justOrderedSetCreate(
   JustAVLTree*         TREE,
   size_t               ELEMENT_SIZE,
   justCompareFunc      COMPARATOR,
-  justLinearAllocator* ALLOCATOR,
+  JustLinearAllocator* ALLOCATOR,
   const char*          TAG)
 {
   JUST_ASSERT_DEBUG_MESSAGE(TREE != NULL, "[ORDERED SET] : Target pointer cannot be NULL");

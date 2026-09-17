@@ -269,7 +269,7 @@ static JustTestResult testOrderedSetArenaBacked(void)
 {
   const char* tag = "SET_ARENA";
   justMemorySetLimit(4096, "SET_ARENA");
-  justLinearAllocator arena;
+  JustLinearAllocator arena;
   bool arenaOk = justLinearAllocCreate(&arena, 2048, NULL, tag);
   JUST_EXPECT_TO_BE_TRUE(arenaOk);
 

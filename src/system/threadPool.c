@@ -57,7 +57,7 @@ JUST_API bool justThreadpoolCreate(
   justThreadPool*      POOL,
   size_t               THREAD_COUNT,
   size_t               QUEUE_CAPACITY,
-  justLinearAllocator* ALLOCATOR,
+  JustLinearAllocator* ALLOCATOR,
   const char*          TAG)
 {
   JUST_ASSERT_DEBUG_MESSAGE(POOL != NULL, "[THREAD POOL] : Target pool cannot be NULL");

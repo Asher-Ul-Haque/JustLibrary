@@ -5,7 +5,7 @@
 #include <stdint.h>
 
 JUST_API bool justBitsetCreate(
-  justBitset* SET,
+  JustBitset* SET,
   size_t      CAPACITY,
   void*       USER_BUFFER,
   const char* TAG)
@@ -41,7 +41,7 @@ JUST_API bool justBitsetCreate(
   return true;
 }
 
-JUST_API void justBitsetDestroy(justBitset* SET)
+JUST_API void justBitsetDestroy(JustBitset* SET)
 {
   JUST_ASSERT_DEBUG_MESSAGE(SET != NULL, "[BITSET] : Cannot destroy a NULL set");
 
@@ -56,7 +56,7 @@ JUST_API void justBitsetDestroy(justBitset* SET)
   SET->ownsMemory = false;
 }
 
-JUST_API bool justBitsetEquals(const justBitset* A, const justBitset* B)
+JUST_API bool justBitsetEquals(const JustBitset* A, const JustBitset* B)
 {
   JUST_ASSERT_DEBUG_MESSAGE(A != NULL && B != NULL, "[BITSET] : Cannot compare NULL sets");
 
@@ -74,7 +74,7 @@ JUST_API bool justBitsetEquals(const justBitset* A, const justBitset* B)
   return ((A->words[lastIdx] & tailMask) == (B->words[lastIdx] & tailMask));
 }
 
-JUST_API void justBitsetUnion(justBitset* DST, const justBitset* SRC)
+JUST_API void justBitsetUnion(JustBitset* DST, const JustBitset* SRC)
 {
   JUST_ASSERT_DEBUG_MESSAGE(DST != NULL && SRC != NULL, "[BITSET] : Cannot union NULL sets");
 
@@ -88,7 +88,7 @@ JUST_API void justBitsetUnion(justBitset* DST, const justBitset* SRC)
   }
 }
 
-JUST_API void justBitsetIntersection(justBitset* DST, const justBitset* SRC)
+JUST_API void justBitsetIntersection(JustBitset* DST, const JustBitset* SRC)
 {
   JUST_ASSERT_DEBUG_MESSAGE(DST != NULL && SRC != NULL, "[BITSET] : Cannot intersect NULL bitsets");
 
@@ -102,7 +102,7 @@ JUST_API void justBitsetIntersection(justBitset* DST, const justBitset* SRC)
   }
 }
 
-JUST_API void justBitsetDifference(justBitset* DST, const justBitset* SRC)
+JUST_API void justBitsetDifference(JustBitset* DST, const JustBitset* SRC)
 {
   JUST_ASSERT_DEBUG_MESSAGE(DST != NULL && SRC != NULL, "[BITSET] : Cannot difference NULL bitsets");
 

@@ -47,7 +47,7 @@ typedef struct justBitset
   size_t    wordCount;  ///< Number of 64-bit backing words
   uint64_t* words;      ///< Backing memory buffer
   bool      ownsMemory; ///< True if allocated internally, false if passed in
-} justBitset;
+} JustBitset;
 
 
 // - - - Internal Tail Helper
@@ -67,7 +67,7 @@ JUST_API static inline uint64_t justBitsetGetTailMask(size_t CAPACITY)
  * @return : true on success, false on failure
 */
 JUST_API bool justBitsetCreate(
-  justBitset*   SET,
+  JustBitset*   SET,
   size_t        CAPACITY,
   void*         USER_BUFFER,
   const char*   TAG);
@@ -76,14 +76,14 @@ JUST_API bool justBitsetCreate(
  * @brief : Destroys the justBitset and frees backing memory if owned
  * @param SET: Pointer to the justBitset to destroy
 */
-JUST_API void justBitsetDestroy(justBitset* SET);
+JUST_API void justBitsetDestroy(JustBitset* SET);
 
 /**
  * @brief : Sets a bit at index to 1
  * @param SET : Pointer to the justBitset
  * @param INDEX : Which index to set
 */
-JUST_API static inline void justBitsetSet(justBitset* SET, size_t INDEX)
+JUST_API static inline void justBitsetSet(JustBitset* SET, size_t INDEX)
 {
   JUST_ASSERT_DEBUG_MESSAGE(SET != NULL, "[BITSET] : Cannot set a bit in a NULL SET");
   JUST_ASSERT_DEBUG_MESSAGE(INDEX < SET->capacity, "[BITSET] : Index out of bounds");
@@ -96,7 +96,7 @@ JUST_API static inline void justBitsetSet(justBitset* SET, size_t INDEX)
  * @param SET : Pointer to the justBitset
  * @param INDEX : Which index to clear
 */
-JUST_API static inline void justBitsetClear(justBitset* SET, size_t INDEX)
+JUST_API static inline void justBitsetClear(JustBitset* SET, size_t INDEX)
 {
   JUST_ASSERT_DEBUG_MESSAGE(SET != NULL, "[BITSET] : Cannot set a bit in a NULL SET");
   JUST_ASSERT_DEBUG_MESSAGE(INDEX < SET->capacity, "[BITSET] : Index out of bounds");
@@ -109,7 +109,7 @@ JUST_API static inline void justBitsetClear(justBitset* SET, size_t INDEX)
  * @param SET : Pointer to the justBitset
  * @param INDEX : Which index to toggle
 */
-JUST_API static inline void justBitsetToggle(justBitset* SET, size_t INDEX)
+JUST_API static inline void justBitsetToggle(JustBitset* SET, size_t INDEX)
 {
   JUST_ASSERT_DEBUG_MESSAGE(SET != NULL, "[BITSET] : Cannot toggle a bit in a NULL SET");
   JUST_ASSERT_DEBUG_MESSAGE(INDEX < SET->capacity, "[BITSET] : Index out of bounds");
@@ -123,7 +123,7 @@ JUST_API static inline void justBitsetToggle(justBitset* SET, size_t INDEX)
  * @param INDEX : Which index to set
  * @return : True if the bit is set, false otherwise
 */
-JUST_API static inline bool justBitsetGet(justBitset* SET, size_t INDEX)
+JUST_API static inline bool justBitsetGet(JustBitset* SET, size_t INDEX)
 {
   JUST_ASSERT_DEBUG_MESSAGE(SET != NULL, "[BITSET] : Cannot get a bit in a NULL SET");
   JUST_ASSERT_DEBUG_MESSAGE(INDEX < SET->capacity, "[BITSET] : Index out of bounds");
@@ -135,7 +135,7 @@ JUST_API static inline bool justBitsetGet(justBitset* SET, size_t INDEX)
  * @brief : Clears all bits to 0
  * @param SET : Pointer to the justBitset
 */
-JUST_API static inline void justBitsetClearAll(justBitset* SET)
+JUST_API static inline void justBitsetClearAll(JustBitset* SET)
 {
   JUST_ASSERT_DEBUG_MESSAGE(SET != NULL, "[BITSET] : Cannot clear all in a NULL SET");
 
@@ -146,7 +146,7 @@ JUST_API static inline void justBitsetClearAll(justBitset* SET)
  * @brief : Sets all bits to 1
  * @param SET : Pointer to the justBitset
 */
-JUST_API static inline void justBitsetSetAll(justBitset* SET)
+JUST_API static inline void justBitsetSetAll(JustBitset* SET)
 {
   JUST_ASSERT_DEBUG_MESSAGE(SET != NULL, "[BITSET] : Cannot set all in a NULL SET");
 
@@ -161,7 +161,7 @@ JUST_API static inline void justBitsetSetAll(justBitset* SET)
  * @brief : Check capacity of a bitset
  * @param SET : Pointer to the justBitset
 */
-JUST_API static inline size_t justBitsetCapacity(const justBitset* SET)
+JUST_API static inline size_t justBitsetCapacity(const JustBitset* SET)
 {
   JUST_ASSERT_DEBUG_MESSAGE(SET != NULL, "[BITSET] : Cannot check capacity of a NULL SET");
 
@@ -175,7 +175,7 @@ JUST_API static inline size_t justBitsetCapacity(const justBitset* SET)
  * @param DST : The destination justBitset
  * @param SRC : The source justBitset
 */
-JUST_API void justBitsetUnion(justBitset* DST, const justBitset* SRC);
+JUST_API void justBitsetUnion(JustBitset* DST, const JustBitset* SRC);
 
 /**
  * @brief : Computes in -place intersection : DST = DST & SRC
@@ -184,7 +184,7 @@ JUST_API void justBitsetUnion(justBitset* DST, const justBitset* SRC);
  * @param DST : The destination justBitset
  * @param SRC : The source justBitset
 */
-JUST_API void justBitsetIntersection(justBitset* DST, const justBitset* SRC);
+JUST_API void justBitsetIntersection(JustBitset* DST, const JustBitset* SRC);
 
 /**
  * @brief : Computes in -place difference : DST = DST & ~SRC
@@ -193,7 +193,7 @@ JUST_API void justBitsetIntersection(justBitset* DST, const justBitset* SRC);
  * @param DST : The destination justBitset
  * @param SRC : The source justBitset
 */
-JUST_API void justBitsetDifference(justBitset* DST, const justBitset* SRC);
+JUST_API void justBitsetDifference(JustBitset* DST, const JustBitset* SRC);
 
 /**
  * @brief : Compares two justBitsets for equality
@@ -201,7 +201,7 @@ JUST_API void justBitsetDifference(justBitset* DST, const justBitset* SRC);
  * @param B : Second justBitset
  * @return : True if identical in capacity and set bits, false otherwise
  */
-JUST_API bool justBitsetEquals(const justBitset* A, const justBitset* B);
+JUST_API bool justBitsetEquals(const JustBitset* A, const JustBitset* B);
 
 #ifdef __cplusplus
 }

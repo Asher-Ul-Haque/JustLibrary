@@ -146,7 +146,7 @@ static JustTestResult testThreadPoolArenaBacked(void)
   const char* tag = "TP_ARENA";
   justMemorySetLimit(32768, tag);
 
-  justLinearAllocator arena;
+  JustLinearAllocator arena;
   bool arenaOk = justLinearAllocCreate(&arena, 16384, NULL, tag);
   JUST_EXPECT_TO_BE_TRUE(arenaOk);
 

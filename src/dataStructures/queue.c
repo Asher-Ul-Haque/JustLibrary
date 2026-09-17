@@ -27,7 +27,7 @@ JUST_API bool justQueueCreate(
   JustQueue*           QUEUE,
   size_t                INITIAL_CAPACITY,
   size_t                ELEMENT_SIZE,
-  justLinearAllocator* ALLOCATOR,
+  JustLinearAllocator* ALLOCATOR,
   const char*           TAG)
 {
   JUST_ASSERT_DEBUG_MESSAGE(QUEUE != NULL, "[QUEUE] : Cannot create a NULL queue");

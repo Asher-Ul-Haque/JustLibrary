@@ -40,7 +40,7 @@
 /// @brief : Stack just has an underlying dynamic Array 
 typedef struct justStack 
 {
-  justDynamicArray array; ///< The underlying dynamic Array
+  JustDynamicArray array; ///< The underlying dynamic Array
 } JustStack;
 
 /**
@@ -55,7 +55,7 @@ JUST_API static inline bool justStackCreate(
   JustStack*           STACK,
   size_t                INITIAL_CAPACITY,
   size_t                ELEMENT_SIZE,
-  justLinearAllocator* ALLOCATOR,
+  JustLinearAllocator* ALLOCATOR,
   const char*           TAG)
 {
   JUST_ASSERT_DEBUG_MESSAGE(STACK != NULL, "[STACK] : Cannot create a NULL STACK");

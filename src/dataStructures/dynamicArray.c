@@ -7,10 +7,10 @@
 #include <string.h>
 
 bool justDynamicArrayCreate(
-  justDynamicArray*    DARRAY,
+  JustDynamicArray*    DARRAY,
   size_t               INITIAL_CAPACITY,
   size_t               ELEMENT_SIZE,
-  justLinearAllocator* ALLOCATOR,
+  JustLinearAllocator* ALLOCATOR,
   const char*          TAG)
 {
   JUST_ASSERT_DEBUG_MESSAGE(DARRAY != NULL, "[DYNAMIC DARRAY] : Cannot create a NULL DARRAY");
@@ -46,7 +46,7 @@ bool justDynamicArrayCreate(
   return true;
 }
 
-void justDynamicArrayDestroy(justDynamicArray* DARRAY)
+void justDynamicArrayDestroy(JustDynamicArray* DARRAY)
 {
   JUST_ASSERT_DEBUG_MESSAGE(DARRAY != NULL, "[DYNAMIC DARRAY] : Cannot destroy a NULL array.");
 
@@ -62,7 +62,7 @@ void justDynamicArrayDestroy(justDynamicArray* DARRAY)
   DARRAY->allocator    = NULL;
 }
 
-bool justDynamicArrayReserve(justDynamicArray* DARRAY, size_t MIN_CAPACITY)
+bool justDynamicArrayReserve(JustDynamicArray* DARRAY, size_t MIN_CAPACITY)
 {
   JUST_ASSERT_DEBUG_MESSAGE(DARRAY != NULL, "[DYNAMIC DARRAY] : Cannot reserve capcity in a NULL DARRAY");
 
@@ -102,7 +102,7 @@ bool justDynamicArrayReserve(justDynamicArray* DARRAY, size_t MIN_CAPACITY)
   return true;
 }
 
-bool __justDynamicArrayGrow(justDynamicArray* DARRAY)
+bool __justDynamicArrayGrow(JustDynamicArray* DARRAY)
 {
   JUST_ASSERT_DEBUG(DARRAY != NULL);
 
@@ -110,7 +110,7 @@ bool __justDynamicArrayGrow(justDynamicArray* DARRAY)
   return justDynamicArrayReserve(DARRAY, targetCap);
 }
 
-bool justDynamicArrayPushRange(justDynamicArray* DARRAY, const void* SRC_BUFFER, size_t COUNT)
+bool justDynamicArrayPushRange(JustDynamicArray* DARRAY, const void* SRC_BUFFER, size_t COUNT)
 {
   JUST_ASSERT_DEBUG(DARRAY != NULL);
   if (!SRC_BUFFER || COUNT == 0) return true;
@@ -131,7 +131,7 @@ bool justDynamicArrayPushRange(justDynamicArray* DARRAY, const void* SRC_BUFFER,
   return true;
 }
 
-bool justDynamicArrayShrinkToFit(justDynamicArray* DARRAY)
+bool justDynamicArrayShrinkToFit(JustDynamicArray* DARRAY)
 {
   JUST_ASSERT_DEBUG_MESSAGE(DARRAY != NULL, "[DYNAMIC DARRAY] : Cannot shrink a NULL DARRAY");
 
@@ -171,7 +171,7 @@ bool justDynamicArrayShrinkToFit(justDynamicArray* DARRAY)
   return true;
 }
 
-JUST_API void* justDynamicArrayEmplace(justDynamicArray* DARRAY)
+JUST_API void* justDynamicArrayEmplace(JustDynamicArray* DARRAY)
 {
   JUST_ASSERT_DEBUG_MESSAGE(DARRAY != NULL, "[DYNAMIC DARRAY] : Cannot emplace in a NULL array");
 

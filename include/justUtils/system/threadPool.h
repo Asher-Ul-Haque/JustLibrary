@@ -66,7 +66,7 @@ typedef struct justThreadPool
   size_t                activeWorkers;  ///< Workers currently executing a task
   bool                  shutdown;       ///< Shutdown flag
   const char*           tag;            ///< Memory tracking tag
-  justLinearAllocator* allocator;      ///< Optional linear allocator
+  JustLinearAllocator* allocator;      ///< Optional linear allocator
 } justThreadPool;
 
 /**
@@ -82,7 +82,7 @@ JUST_API bool justThreadpoolCreate(
   justThreadPool*      POOL,
   size_t               THREAD_COUNT,
   size_t               QUEUE_CAPACITY,
-  justLinearAllocator* ALLOCATOR,
+  JustLinearAllocator* ALLOCATOR,
   const char*          TAG);
 
 /**

@@ -253,7 +253,7 @@ static JustTestResult testHashMapRehashResize(void)
 static JustTestResult testHashMapArenaBacked(void)
 {
   const char* tag = "MAP_ARENA";
-  justLinearAllocator arena;
+  JustLinearAllocator arena;
   bool arenaOk = justLinearAllocCreate(&arena, 1024, NULL, tag);
   JUST_EXPECT_TO_BE_TRUE(arenaOk);
 

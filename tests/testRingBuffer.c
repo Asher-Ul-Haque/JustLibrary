@@ -261,7 +261,7 @@ static JustTestResult testRingBufferArenaBacked(void)
   const char* tag = "RING_ARENA";
   justMemorySetLimit(4096, tag);
 
-  justLinearAllocator arena;
+  JustLinearAllocator arena;
   bool arenaOk = justLinearAllocCreate(&arena, 1024, NULL, tag);
   JUST_EXPECT_TO_BE_TRUE(arenaOk);
 

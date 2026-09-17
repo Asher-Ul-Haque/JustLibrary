@@ -12,7 +12,7 @@ static inline bool justlinearAllocIsPowerOfTwo(size_t X)
 }
 
 bool justLinearAllocCreate(
-  justLinearAllocator*  ALLOCATOR,
+  JustLinearAllocator*  ALLOCATOR,
   size_t                TOTAL_SIZE,
   void*                 USER_BUFFER,
   const char*           TAG)
@@ -48,7 +48,7 @@ bool justLinearAllocCreate(
   return true;
 }
 
-void justLinearAllocDestroy(justLinearAllocator* ALLOCATOR)
+void justLinearAllocDestroy(JustLinearAllocator* ALLOCATOR)
 {
   if (!ALLOCATOR) return;
 
@@ -64,7 +64,7 @@ void justLinearAllocDestroy(justLinearAllocator* ALLOCATOR)
 }
 
 void* justLinearAllocAllocate(
-  justLinearAllocator*  ALLOCATOR, 
+  JustLinearAllocator*  ALLOCATOR, 
   size_t                SIZE, 
   size_t                ALIGNMENT)
 {
@@ -94,7 +94,7 @@ void* justLinearAllocAllocate(
   return (void*)alignedPtr;
 }
 
-void justLinearAllocDebugPrint(justLinearAllocator* ALLOCATOR)
+void justLinearAllocDebugPrint(JustLinearAllocator* ALLOCATOR)
 {
   #ifdef DEBUG 
     #include <memory.h>

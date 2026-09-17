@@ -82,7 +82,7 @@ JUST_API bool justHashmapCreate(
   size_t                 INITIAL_CAPACITY,
   justHashFunction       HASHER,
   justKeyCompareFunction COMPARATOR,
-  justLinearAllocator*   ALLOCATOR,
+  JustLinearAllocator*   ALLOCATOR,
   const char*            TAG)
 {
   JUST_ASSERT_DEBUG_MESSAGE(MAP != NULL, "[HASH MAP] : Cannot create a NULL Hashmap");

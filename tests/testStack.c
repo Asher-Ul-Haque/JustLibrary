@@ -165,7 +165,7 @@ static JustTestResult testStackArenaBacked(void)
   const char* tag = "STACK_ARENA";
   justMemorySetLimit(4096, tag);
 
-  justLinearAllocator arena;
+  JustLinearAllocator arena;
   bool arenaOk = justLinearAllocCreate(&arena, 1024, NULL, tag);
   JUST_EXPECT_TO_BE_TRUE(arenaOk);
 

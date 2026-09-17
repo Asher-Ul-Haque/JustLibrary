@@ -53,7 +53,7 @@ typedef struct justLinearAllocator
   size_t totalSize;   ///< Total buffer capacity in bytes
   size_t allocated;   ///< Current bump offset
   bool   ownsMemory;  ///< True if memory was allocated by this struct and must be freed
-} justLinearAllocator;
+} JustLinearAllocator;
 
 /**
  * @brief : Initializes a fixed-capacity linear allocator.
@@ -64,7 +64,7 @@ typedef struct justLinearAllocator
  * @return : true if initialized successfully, false otherwise.
  */
 JUST_API bool justLinearAllocCreate(
-  justLinearAllocator* ALLOCATOR,
+  JustLinearAllocator* ALLOCATOR,
   size_t                TOTAL_SIZE,
   void*                 USER_BUFFER,
   const char*           TAG);
@@ -73,7 +73,7 @@ JUST_API bool justLinearAllocCreate(
  * @brief : deletes a linear allocator 
  * @param ALLOCATOR : a pointer to the linear allocator to destroy
 */
-JUST_API void justLinearAllocDestroy(justLinearAllocator* ALLOCATOR);
+JUST_API void justLinearAllocDestroy(JustLinearAllocator* ALLOCATOR);
 
 /**
  * @brief : Alloactes memory from the allocator and returns it 
@@ -83,7 +83,7 @@ JUST_API void justLinearAllocDestroy(justLinearAllocator* ALLOCATOR);
  * @return : a pointer to the memory if successful, NULL if fail (for example not being able to resize)
 */
 JUST_API void* justLinearAllocAllocate(
-  justLinearAllocator* ALLOCATOR,
+  JustLinearAllocator* ALLOCATOR,
   size_t                SIZE,
   size_t                ALIGNMENT);
 
@@ -91,7 +91,7 @@ JUST_API void* justLinearAllocAllocate(
  * @brief : Resets the entire allocator back to zero. Memory is retained for reuse.
  * @param ALLOCATOR :Pointer to the allocator.
  */
-JUST_API static inline void justLinearAllocReset(justLinearAllocator* ALLOCATOR)
+JUST_API static inline void justLinearAllocReset(JustLinearAllocator* ALLOCATOR)
 {
   JUST_ASSERT_DEBUG_MESSAGE(ALLOCATOR != NULL, "[LINEAR ALLOCATOR] : Cannot reset a NULL ALLOCATOR");
   if (ALLOCATOR) ALLOCATOR->allocated = 0;
@@ -102,7 +102,7 @@ JUST_API static inline void justLinearAllocReset(justLinearAllocator* ALLOCATOR)
  * @param ALLOCATOR : Pointer to the allocator.
  * @return : Marker offset.
  */
-JUST_API static inline justLinearMarker justLinearAllocGetMarker(const justLinearAllocator* ALLOCATOR)
+JUST_API static inline justLinearMarker justLinearAllocGetMarker(const JustLinearAllocator* ALLOCATOR)
 {
   JUST_ASSERT_DEBUG_MESSAGE(ALLOCATOR != NULL, "[LINEAR ALLOCATOR] : Cannot get a marker from NULL ALLOCATOR");
   return ALLOCATOR->allocated;
@@ -113,7 +113,7 @@ JUST_API static inline justLinearMarker justLinearAllocGetMarker(const justLinea
  * @param ALLOCATOR : Pointer to the allocator.
  * @param MARKER : Previously captured marker.
  */
-JUST_API static inline void justLinearAllocRewind(justLinearAllocator* ALLOCATOR, justLinearMarker MARKER)
+JUST_API static inline void justLinearAllocRewind(JustLinearAllocator* ALLOCATOR, justLinearMarker MARKER)
 {
   JUST_ASSERT_DEBUG_MESSAGE(ALLOCATOR != NULL, "[LINEAR ALLOCATOR] : Cannot rewind on a NULL MARKER");
 
@@ -132,7 +132,7 @@ JUST_API static inline void justLinearAllocRewind(justLinearAllocator* ALLOCATOR
  * @param ALLOCATOR : Pointer to the allocator
  * @return : how many bytes are used
  */
-JUST_API static inline size_t justLinearAllocGetUsed(const justLinearAllocator* ALLOCATOR)
+JUST_API static inline size_t justLinearAllocGetUsed(const JustLinearAllocator* ALLOCATOR)
 {
   JUST_ASSERT_DEBUG_MESSAGE(ALLOCATOR != NULL, "[LINEAR ALLOCATOR] : Cannot get used on NULL ALLOCATOR");
 
@@ -144,7 +144,7 @@ JUST_API static inline size_t justLinearAllocGetUsed(const justLinearAllocator* 
  * @param ALLOCATOR : Pointer to the allocator
  * @return : How many bytes can still be allocatoed here
  */
-JUST_API static inline size_t justLinearAllocGetRemaining(const justLinearAllocator* ALLOCATOR)
+JUST_API static inline size_t justLinearAllocGetRemaining(const JustLinearAllocator* ALLOCATOR)
 {
   JUST_ASSERT_DEBUG_MESSAGE(ALLOCATOR != NULL, "[LINEAR ALLOCATOR] : Cannot get remaining on NULL ALLOCATOR");
 
@@ -154,7 +154,7 @@ JUST_API static inline size_t justLinearAllocGetRemaining(const justLinearAlloca
  * @brief : prints debug info on the allocator in debug mode, does nothing in release mode 
  * @param ALLOCATOR : a pointer to the allocator to be visualized
 */
-JUST_API void justLinearAllocDebugPrint(justLinearAllocator* ALLOCATOR);
+JUST_API void justLinearAllocDebugPrint(JustLinearAllocator* ALLOCATOR);
 
 #ifdef __cplusplus
 }

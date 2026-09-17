@@ -51,7 +51,7 @@ typedef struct justQueue
   size_t                tail;         ///< Next write index
   size_t                elementSize;  ///< sizeof(T)
   const char*           tag;          ///< WHy create this queue
-  justLinearAllocator*  allocator;    ///< Optional linear allocator, NULL for system heap
+  JustLinearAllocator*  allocator;    ///< Optional linear allocator, NULL for system heap
 } JustQueue;
 
 /**
@@ -67,7 +67,7 @@ JUST_API bool justQueueCreate(
   JustQueue*            QUEUE, 
   size_t                INITIAL_CAPACITY,
   size_t                ELEMENT_SIZE,
-  justLinearAllocator*  ALLOCATOR,
+  JustLinearAllocator*  ALLOCATOR,
   const char*           TAG);
 
 /**

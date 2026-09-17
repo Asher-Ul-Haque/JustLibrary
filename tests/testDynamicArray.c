@@ -26,7 +26,7 @@ typedef struct Vector3D
 
 static JustTestResult testDynamicArrayCreateDestroy(void)
 {
-  justDynamicArray arr;
+  JustDynamicArray arr;
   bool ok = JUST_DARRAY_INIT(&arr, 4, int32_t);
   JUST_EXPECT_TO_BE_TRUE(ok);
 
@@ -44,7 +44,7 @@ static JustTestResult testDynamicArrayReserveAndShrink(void)
   const char* tag = "DARRAY_RESERVE";
   justMemorySetLimit(4096, tag);
 
-  justDynamicArray arr;
+  JustDynamicArray arr;
   bool ok = JUST_DARRAY_INIT_TAGGED(&arr, 2, uint32_t, tag);
   JUST_EXPECT_TO_BE_TRUE(ok);
 
@@ -86,7 +86,7 @@ static JustTestResult testDynamicArrayPushAndPop(void)
   const char* tag = "DARRAY_OPS";
   justMemorySetLimit(4096, tag);
 
-  justDynamicArray arr;
+  JustDynamicArray arr;
   JUST_DARRAY_INIT_TAGGED(&arr, 2, int64_t, tag);
 
   // Push 10 elements to force multiple geometric growths
@@ -129,7 +129,7 @@ static JustTestResult testDynamicArrayPushAndPop(void)
 
 static JustTestResult testDynamicArrayEmplaceStruct(void)
 {
-  justDynamicArray arr;
+  JustDynamicArray arr;
   JUST_DARRAY_INIT(&arr, 2, Vector3D);
 
   // Emplace directly into uninitialized storage (zero-copy)
@@ -158,7 +158,7 @@ static JustTestResult testDynamicArrayPushRange(void)
   const char* tag = "DARRAY_RANGE";
   justMemorySetLimit(4096, tag);
 
-  justDynamicArray arr;
+  JustDynamicArray arr;
   JUST_DARRAY_INIT_TAGGED(&arr, 2, int32_t, tag);
 
   int32_t sourceData[6] = { 10, 20, 30, 40, 50, 60 };
@@ -185,11 +185,11 @@ static JustTestResult testDynamicArrayPushRange(void)
 static JustTestResult testDynamicArrayArenaBacked(void)
 {
   const char* tag = "DARRAY_ARENA";
-  justLinearAllocator arena;
+  JustLinearAllocator arena;
   bool arenaOk = justLinearAllocCreate(&arena, 512, NULL, tag);
   JUST_EXPECT_TO_BE_TRUE(arenaOk);
 
-  justDynamicArray arr;
+  JustDynamicArray arr;
   bool arrOk = justDynamicArrayCreate(&arr, 4, sizeof(uint32_t), &arena, tag);
   JUST_EXPECT_TO_BE_TRUE(arrOk);
 

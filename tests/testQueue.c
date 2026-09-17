@@ -262,7 +262,7 @@ static JustTestResult testQueueArenaBacked(void)
   const char* tag = "Q_ARENA";
   justMemorySetLimit(4096, tag);
 
-  justLinearAllocator arena;
+  JustLinearAllocator arena;
   bool arenaOk = justLinearAllocCreate(&arena, 1024, NULL, tag);
   JUST_EXPECT_TO_BE_TRUE(arenaOk);
 

@@ -14,7 +14,7 @@ static inline bool objectPoolIsPowerOfTwo(size_t x)
 }
 
 bool justObjectPoolCreate(
-  justObjectPool*  POOL,
+  JustObjectPool*  POOL,
   size_t            CAPACITY,
   size_t            OBJECT_SIZE,
   size_t            ALIGNMENT,
@@ -84,7 +84,7 @@ bool justObjectPoolCreate(
   return true;
 }
 
-void justObjectPoolDestroy(justObjectPool* POOL) 
+void justObjectPoolDestroy(JustObjectPool* POOL) 
 {
   JUST_ASSERT_DEBUG_MESSAGE(POOL != NULL, "[OBJECT POOL] : Cannot destroy a NULL ObjectPool pointer");
 
@@ -106,7 +106,7 @@ void justObjectPoolDestroy(justObjectPool* POOL)
   POOL->ownsMemory      = false;
 }
 
-void* justObjectPoolTakeObject(justObjectPool* POOL) 
+void* justObjectPoolTakeObject(JustObjectPool* POOL)
 {
   JUST_ASSERT_DEBUG_MESSAGE(POOL != NULL, "[OBJECT POOL] : Cannot take from NULL pool");
   JUST_ASSERT_DEBUG_MESSAGE(POOL->memory != NULL, "[OBJECT POOL] : Pool memory is NULL, make sure pool is initialized");
@@ -136,7 +136,7 @@ void* justObjectPoolTakeObject(justObjectPool* POOL)
   return (void*)objAddr;
 }
 
-void justObjectPoolReturnObject(justObjectPool* POOL, void* OBJECT) 
+void justObjectPoolReturnObject(JustObjectPool* POOL, void* OBJECT) 
 {
   JUST_ASSERT_DEBUG_MESSAGE(POOL != NULL, "[OBJECT POOL] Cannot return object to NULL pool");
   JUST_ASSERT_DEBUG_MESSAGE(OBJECT != NULL, "[OBJECT POOL] Cannot return NULL object");
@@ -167,7 +167,7 @@ void justObjectPoolReturnObject(justObjectPool* POOL, void* OBJECT)
   POOL->freeCount++;
 }
 
-void justObjectPoolDebugPrint(const justObjectPool* POOL)
+void justObjectPoolDebugPrint(const JustObjectPool* POOL)
 {
   #ifdef DEBUG
     JUST_ASSERT_DEBUG_MESSAGE(POOL != NULL, "[OBJECT POOL] Cannot visualize a NULL pool");

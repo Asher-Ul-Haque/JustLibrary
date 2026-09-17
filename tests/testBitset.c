@@ -20,7 +20,7 @@
 
 static JustTestResult testBitsetCreateAndDestroy(void)
 {
-  justBitset bs;
+  JustBitset bs;
   bool ok = justBitsetCreate(&bs, 100, NULL, "BITSET_TEST");
   JUST_EXPECT_TO_BE_TRUE(ok);
 
@@ -41,7 +41,7 @@ static JustTestResult testBitsetCreateAndDestroy(void)
 
 static JustTestResult testBitsetMutationsAndWordBoundaries(void)
 {
-  justBitset bs;
+  JustBitset bs;
   justBitsetCreate(&bs, 130, NULL, "BITSET_MUTATION"); // Spans 3 64-bit words
 
   // Test bit index 0 (first word)
@@ -81,7 +81,7 @@ static JustTestResult testBitsetMutationsAndWordBoundaries(void)
 
 static JustTestResult testBitsetBulkOperationsAndTailMask(void)
 {
-  justBitset bs;
+  JustBitset bs;
   // 70 bits = Word 0 (64 bits) + Word 1 (6 bits active, 58 bits padded)
   justBitsetCreate(&bs, 70, NULL, "BITSET_BULK");
 
@@ -112,7 +112,7 @@ static JustTestResult testBitsetBulkOperationsAndTailMask(void)
 
 static JustTestResult testBitsetEquality(void)
 {
-  justBitset a, b, c;
+  JustBitset a, b, c;
   justBitsetCreate(&a, 80, NULL, "BS_A");
   justBitsetCreate(&b, 80, NULL, "BS_B");
   justBitsetCreate(&c, 90, NULL, "BS_C");
@@ -139,7 +139,7 @@ static JustTestResult testBitsetEquality(void)
 
 static JustTestResult testBitsetBitwiseOperations(void)
 {
-  justBitset a, b;
+  JustBitset a, b;
   justBitsetCreate(&a, 128, NULL, "BS_OP_A");
   justBitsetCreate(&b, 128, NULL, "BS_OP_B");
 
@@ -154,7 +154,7 @@ static JustTestResult testBitsetBitwiseOperations(void)
   justBitsetSet(&b, 90);
 
   // Union test: A = A | B => { 5, 50, 70, 90 }
-  justBitset aUnion;
+  JustBitset aUnion;
   justBitsetCreate(&aUnion, 128, NULL, "BS_UNION");
   justBitsetSet(&aUnion, 5);
   justBitsetSet(&aUnion, 50);
@@ -168,7 +168,7 @@ static JustTestResult testBitsetBitwiseOperations(void)
   JUST_EXPECT_TO_BE_FALSE(justBitsetGet(&aUnion, 0));
 
   // Intersection test: A = A & B => { 50, 70 }
-  justBitset aInter;
+  JustBitset aInter;
   justBitsetCreate(&aInter, 128, NULL, "BS_INTER");
   justBitsetSet(&aInter, 5);
   justBitsetSet(&aInter, 50);
@@ -181,7 +181,7 @@ static JustTestResult testBitsetBitwiseOperations(void)
   JUST_EXPECT_TO_BE_FALSE(justBitsetGet(&aInter, 90));
 
   // Difference test: A = A & ~B => { 5 }
-  justBitset aDiff;
+  JustBitset aDiff;
   justBitsetCreate(&aDiff, 128, NULL, "BS_DIFF");
   justBitsetSet(&aDiff, 5);
   justBitsetSet(&aDiff, 50);
@@ -208,7 +208,7 @@ static JustTestResult testBitsetBitwiseOperations(void)
 static JustTestResult testBitsetUserSuppliedMemory(void)
 {
   uint64_t backingBuffer[2] = { 0, 0 }; // 128 bits capacity
-  justBitset bs;
+  JustBitset bs;
 
   bool ok = justBitsetCreate(&bs, 128, backingBuffer, "USER_MEM");
   JUST_EXPECT_TO_BE_TRUE(ok);

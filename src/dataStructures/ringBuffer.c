@@ -26,7 +26,7 @@ JUST_API bool justRingBufferCreate(
   size_t               CAPACITY,
   size_t               ELEMENT_SIZE,
   bool                 ALLOW_OVERWRITE,
-  justLinearAllocator* ALLOCATOR,
+  JustLinearAllocator* ALLOCATOR,
   const char*          TAG)
 {
   JUST_ASSERT_DEBUG_MESSAGE(RING != NULL, "[RING BUFFER] : Target pointer cannot be NULL");

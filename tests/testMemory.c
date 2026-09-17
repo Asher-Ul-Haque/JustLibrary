@@ -116,7 +116,7 @@ static JustTestResult testTrackerAllocationLimits(void)
 
 static JustTestResult testLinearAllocCreationAndReset(void)
 {
-  justLinearAllocator alloc;
+  JustLinearAllocator alloc;
   bool created = justLinearAllocCreate(&alloc, 1024, NULL, "ARENA_TEST");
   JUST_EXPECT_TO_BE_TRUE(created);
 
@@ -139,7 +139,7 @@ static JustTestResult testLinearAllocCreationAndReset(void)
 
 static JustTestResult testLinearAllocStrictAlignment(void)
 {
-  justLinearAllocator alloc;
+  JustLinearAllocator alloc;
   justLinearAllocCreate(&alloc, 4096, NULL, "ALIGN_TEST");
 
   // Force unaligned offset: 1-byte allocation
@@ -166,7 +166,7 @@ static JustTestResult testLinearAllocStrictAlignment(void)
 
 static JustTestResult testLinearAllocOverflow(void)
 {
-  justLinearAllocator alloc;
+  JustLinearAllocator alloc;
   justLinearAllocCreate(&alloc, 128, NULL, "OVERFLOW_TEST");
 
   void* p1 = justLinearAllocAllocate(&alloc, 100, 0);
@@ -182,7 +182,7 @@ static JustTestResult testLinearAllocOverflow(void)
 
 static JustTestResult testLinearAllocMarkerRewind(void)
 {
-  justLinearAllocator alloc;
+  JustLinearAllocator alloc;
   justLinearAllocCreate(&alloc, 1024, NULL, "REWIND_TEST");
 
   void* p1 = justLinearAllocAllocate(&alloc, 128, 0);
@@ -222,7 +222,7 @@ typedef struct Particle
 
 static JustTestResult testObjectPoolCreationAndSizing(void)
 {
-  justObjectPool pool;
+  JustObjectPool pool;
   bool ok = justObjectPoolCreate(&pool, 32, sizeof(Particle), alignof(Particle), NULL, "POOL_TEST");
   JUST_EXPECT_TO_BE_TRUE(ok);
 
@@ -241,7 +241,7 @@ static JustTestResult testObjectPoolCreationAndSizing(void)
 
 static JustTestResult testObjectPoolTakeAndReturn(void)
 {
-  justObjectPool pool;
+  JustObjectPool pool;
   justObjectPoolCreate(&pool, 4, sizeof(uint64_t), alignof(uint64_t), NULL, "POOL_TAKE_TEST");
 
   uint64_t* a = (uint64_t*)justObjectPoolTakeObject(&pool);
@@ -273,7 +273,7 @@ static JustTestResult testObjectPoolTakeAndReturn(void)
 
 static JustTestResult testObjectPoolSaturation(void)
 {
-  justObjectPool pool;
+  JustObjectPool pool;
   justObjectPoolCreate(&pool, 3, sizeof(int32_t), alignof(int32_t), NULL, "POOL_SAT_TEST");
 
   void* p1 = justObjectPoolTakeObject(&pool);
@@ -309,7 +309,7 @@ static JustTestResult testObjectPoolDoubleFreeTrap(void)
 #ifdef DEBUG
   // In debug mode, bitset verification will trigger an assertion (SIGABRT).
   // The fork-isolated test runner safely intercepts this crash.
-  justObjectPool pool;
+  JustObjectPool pool;
   justObjectPoolCreate(&pool, 2, sizeof(int32_t), alignof(int32_t), NULL, "TRAP_TEST");
 
   void* obj = justObjectPoolTakeObject(&pool);

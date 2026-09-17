@@ -73,7 +73,7 @@ typedef struct justAVLTree
   size_t                elementSize;  ///< How big is an element in bytes
   justCompareFunc      compare;      ///< Compare function
   const char*           tag;          ///< Why was this tree created
-  justLinearAllocator* allocator;    ///< Optional linear allocator
+  JustLinearAllocator* allocator;    ///< Optional linear allocator
 } JustAVLTree;
 
 typedef JustAVLTree OrderedSet;
@@ -91,7 +91,7 @@ JUST_API bool justOrderedSetCreate(
   JustAVLTree*         TREE,
   size_t                ELEMENT_SIZE,
   justCompareFunc      COMPARATOR,
-  justLinearAllocator* ALLOCATOR,
+  JustLinearAllocator* ALLOCATOR,
   const char*           TAG);
 
 /**

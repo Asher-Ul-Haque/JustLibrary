@@ -28,7 +28,8 @@
 */
 
 /// @brief : If IMPL_ALL is defined, include every system
-#ifdef JUST_LIB_IMPL_ALL
+#if (defined JUST_LIB_IMPL_ALL) || (defined PROMO_CODE)
+
   #ifndef JUST_LIB_IMPL_MEMORY
     #define JUST_LIB_IMPL_MEMORY
   #endif
@@ -729,7 +730,7 @@ JUST_API size_t justMemoryGetActiveBytes(const char* TAG);
  * @warning : just for debugging, not for actually parsing memory usage
  * @see : memoryGetActiveBytes for better usage API
 */
-JUST_API void justMemoryLogUsageStr(bool VERBOSE);
+JUST_API void justMemoryLogUsage(bool VERBOSE);
 
 /**
  * @brief : Sets a limit on the memory allocation of a particular type
@@ -1193,7 +1194,7 @@ typedef struct justLinearAllocator
   size_t totalSize;   ///< Total buffer capacity in bytes
   size_t allocated;   ///< Current bump offset
   bool   ownsMemory;  ///< True if memory was allocated by this struct and must be freed
-} justLinearAllocator;
+} JustLinearAllocator;
 
 /**
  * @brief : Initializes a fixed-capacity linear allocator.
@@ -1204,7 +1205,7 @@ typedef struct justLinearAllocator
  * @return : true if initialized successfully, false otherwise.
  */
 JUST_API bool justLinearAllocCreate(
-  justLinearAllocator* ALLOCATOR,
+  JustLinearAllocator* ALLOCATOR,
   size_t                TOTAL_SIZE,
   void*                 USER_BUFFER,
   const char*           TAG);
@@ -1213,7 +1214,7 @@ JUST_API bool justLinearAllocCreate(
  * @brief : deletes a linear allocator 
  * @param ALLOCATOR : a pointer to the linear allocator to destroy
 */
-JUST_API void justLinearAllocDestroy(justLinearAllocator* ALLOCATOR);
+JUST_API void justLinearAllocDestroy(JustLinearAllocator* ALLOCATOR);
 
 /**
  * @brief : Alloactes memory from the allocator and returns it 
@@ -1223,7 +1224,7 @@ JUST_API void justLinearAllocDestroy(justLinearAllocator* ALLOCATOR);
  * @return : a pointer to the memory if successful, NULL if fail (for example not being able to resize)
 */
 JUST_API void* justLinearAllocAllocate(
-  justLinearAllocator* ALLOCATOR,
+  JustLinearAllocator* ALLOCATOR,
   size_t                SIZE,
   size_t                ALIGNMENT);
 
@@ -1231,7 +1232,7 @@ JUST_API void* justLinearAllocAllocate(
  * @brief : Resets the entire allocator back to zero. Memory is retained for reuse.
  * @param ALLOCATOR :Pointer to the allocator.
  */
-JUST_API static inline void justLinearAllocReset(justLinearAllocator* ALLOCATOR)
+JUST_API static inline void justLinearAllocReset(JustLinearAllocator* ALLOCATOR)
 {
   JUST_ASSERT_DEBUG_MESSAGE(ALLOCATOR != NULL, "[LINEAR ALLOCATOR] : Cannot reset a NULL ALLOCATOR");
   if (ALLOCATOR) ALLOCATOR->allocated = 0;
@@ -1242,7 +1243,7 @@ JUST_API static inline void justLinearAllocReset(justLinearAllocator* ALLOCATOR)
  * @param ALLOCATOR : Pointer to the allocator.
  * @return : Marker offset.
  */
-JUST_API static inline justLinearMarker justLinearAllocGetMarker(const justLinearAllocator* ALLOCATOR)
+JUST_API static inline justLinearMarker justLinearAllocGetMarker(const JustLinearAllocator* ALLOCATOR)
 {
   JUST_ASSERT_DEBUG_MESSAGE(ALLOCATOR != NULL, "[LINEAR ALLOCATOR] : Cannot get a marker from NULL ALLOCATOR");
   return ALLOCATOR->allocated;
@@ -1253,7 +1254,7 @@ JUST_API static inline justLinearMarker justLinearAllocGetMarker(const justLinea
  * @param ALLOCATOR : Pointer to the allocator.
  * @param MARKER : Previously captured marker.
  */
-JUST_API static inline void justLinearAllocRewind(justLinearAllocator* ALLOCATOR, justLinearMarker MARKER)
+JUST_API static inline void justLinearAllocRewind(JustLinearAllocator* ALLOCATOR, justLinearMarker MARKER)
 {
   JUST_ASSERT_DEBUG_MESSAGE(ALLOCATOR != NULL, "[LINEAR ALLOCATOR] : Cannot rewind on a NULL MARKER");
 
@@ -1272,7 +1273,7 @@ JUST_API static inline void justLinearAllocRewind(justLinearAllocator* ALLOCATOR
  * @param ALLOCATOR : Pointer to the allocator
  * @return : how many bytes are used
  */
-JUST_API static inline size_t justLinearAllocGetUsed(const justLinearAllocator* ALLOCATOR)
+JUST_API static inline size_t justLinearAllocGetUsed(const JustLinearAllocator* ALLOCATOR)
 {
   JUST_ASSERT_DEBUG_MESSAGE(ALLOCATOR != NULL, "[LINEAR ALLOCATOR] : Cannot get used on NULL ALLOCATOR");
 
@@ -1284,7 +1285,7 @@ JUST_API static inline size_t justLinearAllocGetUsed(const justLinearAllocator* 
  * @param ALLOCATOR : Pointer to the allocator
  * @return : How many bytes can still be allocatoed here
  */
-JUST_API static inline size_t justLinearAllocGetRemaining(const justLinearAllocator* ALLOCATOR)
+JUST_API static inline size_t justLinearAllocGetRemaining(const JustLinearAllocator* ALLOCATOR)
 {
   JUST_ASSERT_DEBUG_MESSAGE(ALLOCATOR != NULL, "[LINEAR ALLOCATOR] : Cannot get remaining on NULL ALLOCATOR");
 
@@ -1294,7 +1295,7 @@ JUST_API static inline size_t justLinearAllocGetRemaining(const justLinearAlloca
  * @brief : prints debug info on the allocator in debug mode, does nothing in release mode 
  * @param ALLOCATOR : a pointer to the allocator to be visualized
 */
-JUST_API void justLinearAllocDebugPrint(justLinearAllocator* ALLOCATOR);
+JUST_API void justLinearAllocDebugPrint(JustLinearAllocator* ALLOCATOR);
 
 #ifdef __cplusplus
 }
@@ -1315,7 +1316,7 @@ static inline bool justlinearAllocIsPowerOfTwo(size_t X)
 }
 
 bool justLinearAllocCreate(
-  justLinearAllocator* ALLOCATOR,
+  JustLinearAllocator* ALLOCATOR,
   size_t                TOTAL_SIZE,
   void*                 USER_BUFFER,
   const char*           TAG)
@@ -1351,7 +1352,7 @@ bool justLinearAllocCreate(
   return true;
 }
 
-void justLinearAllocDestroy(justLinearAllocator* ALLOCATOR)
+void justLinearAllocDestroy(JustLinearAllocator* ALLOCATOR)
 {
   if (!ALLOCATOR) return;
 
@@ -1367,7 +1368,7 @@ void justLinearAllocDestroy(justLinearAllocator* ALLOCATOR)
 }
 
 void* justLinearAllocAllocate(
-  justLinearAllocator* ALLOCATOR, 
+  JustLinearAllocator* ALLOCATOR, 
   size_t                SIZE, 
   size_t                ALIGNMENT)
 {
@@ -1397,7 +1398,7 @@ void* justLinearAllocAllocate(
   return (void*)alignedPtr;
 }
 
-void justLinearAllocDebugPrint(justLinearAllocator* ALLOCATOR)
+void justLinearAllocDebugPrint(JustLinearAllocator* ALLOCATOR)
 {
   #ifdef DEBUG 
     #include <memory.h>
@@ -1480,7 +1481,7 @@ typedef struct justBitset
   size_t    wordCount;  ///< Number of 64-bit backing words
   uint64_t* words;      ///< Backing memory buffer
   bool      ownsMemory; ///< True if allocated internally, false if passed in
-} justBitset;
+} JustBitset;
 
 
 // - - - Internal Tail Helper
@@ -1500,7 +1501,7 @@ JUST_API static inline uint64_t justBitsetGetTailMask(size_t CAPACITY)
  * @return : true on success, false on failure
 */
 JUST_API bool justBitsetCreate(
-  justBitset*   SET,
+  JustBitset*   SET,
   size_t        CAPACITY,
   void*         USER_BUFFER,
   const char*   TAG);
@@ -1509,14 +1510,14 @@ JUST_API bool justBitsetCreate(
  * @brief : Destroys the justBitset and frees backing memory if owned
  * @param SET: Pointer to the justBitset to destroy
 */
-JUST_API void justBitsetDestroy(justBitset* SET);
+JUST_API void justBitsetDestroy(JustBitset* SET);
 
 /**
  * @brief : Sets a bit at index to 1
  * @param SET : Pointer to the justBitset
  * @param INDEX : Which index to set
 */
-JUST_API static inline void justBitsetSet(justBitset* SET, size_t INDEX)
+JUST_API static inline void justBitsetSet(JustBitset* SET, size_t INDEX)
 {
   JUST_ASSERT_DEBUG_MESSAGE(SET != NULL, "[BITSET] : Cannot set a bit in a NULL SET");
   JUST_ASSERT_DEBUG_MESSAGE(INDEX < SET->capacity, "[BITSET] : Index out of bounds");
@@ -1529,7 +1530,7 @@ JUST_API static inline void justBitsetSet(justBitset* SET, size_t INDEX)
  * @param SET : Pointer to the justBitset
  * @param INDEX : Which index to clear
 */
-JUST_API void justBitsetClear(justBitset* SET, size_t INDEX)
+JUST_API void justBitsetClear(JustBitset* SET, size_t INDEX)
 {
   JUST_ASSERT_DEBUG_MESSAGE(SET != NULL, "[BITSET] : Cannot set a bit in a NULL SET");
   JUST_ASSERT_DEBUG_MESSAGE(INDEX < SET->capacity, "[BITSET] : Index out of bounds");
@@ -1542,7 +1543,7 @@ JUST_API void justBitsetClear(justBitset* SET, size_t INDEX)
  * @param SET : Pointer to the justBitset
  * @param INDEX : Which index to toggle
 */
-JUST_API static inline void justBitsetToggle(justBitset* SET, size_t INDEX)
+JUST_API static inline void justBitsetToggle(JustBitset* SET, size_t INDEX)
 {
   JUST_ASSERT_DEBUG_MESSAGE(SET != NULL, "[BITSET] : Cannot toggle a bit in a NULL SET");
   JUST_ASSERT_DEBUG_MESSAGE(INDEX < SET->capacity, "[BITSET] : Index out of bounds");
@@ -1556,7 +1557,7 @@ JUST_API static inline void justBitsetToggle(justBitset* SET, size_t INDEX)
  * @param INDEX : Which index to set
  * @return : True if the bit is set, false otherwise
 */
-JUST_API static inline bool justBitsetGet(justBitset* SET, size_t INDEX)
+JUST_API static inline bool justBitsetGet(JustBitset* SET, size_t INDEX)
 {
   JUST_ASSERT_DEBUG_MESSAGE(SET != NULL, "[BITSET] : Cannot get a bit in a NULL SET");
   JUST_ASSERT_DEBUG_MESSAGE(INDEX < SET->capacity, "[BITSET] : Index out of bounds");
@@ -1568,7 +1569,7 @@ JUST_API static inline bool justBitsetGet(justBitset* SET, size_t INDEX)
  * @brief : Clears all bits to 0
  * @param SET : Pointer to the justBitset
 */
-JUST_API static inline void justBitsetClearAll(justBitset* SET)
+JUST_API static inline void justBitsetClearAll(JustBitset* SET)
 {
   JUST_ASSERT_DEBUG_MESSAGE(SET != NULL, "[BITSET] : Cannot clear all in a NULL SET");
 
@@ -1579,7 +1580,7 @@ JUST_API static inline void justBitsetClearAll(justBitset* SET)
  * @brief : Sets all bits to 1
  * @param SET : Pointer to the justBitset
 */
-JUST_API static inline void justBitsetSetAll(justBitset* SET)
+JUST_API static inline void justBitsetSetAll(JustBitset* SET)
 {
   JUST_ASSERT_DEBUG_MESSAGE(SET != NULL, "[BITSET] : Cannot set all in a NULL SET");
 
@@ -1594,7 +1595,7 @@ JUST_API static inline void justBitsetSetAll(justBitset* SET)
  * @brief : Check capacity of a bitset
  * @param SET : Pointer to the justBitset
 */
-JUST_API static inline size_t justBitsetCapacity(const justBitset* SET)
+JUST_API static inline size_t justBitsetCapacity(const JustBitset* SET)
 {
   JUST_ASSERT_DEBUG_MESSAGE(SET != NULL, "[BITSET] : Cannot check capacity of a NULL SET");
 
@@ -1608,7 +1609,7 @@ JUST_API static inline size_t justBitsetCapacity(const justBitset* SET)
  * @param DST : The destination justBitset
  * @param SRC : The source justBitset
 */
-JUST_API void justBitsetUnion(justBitset* DST, const justBitset* SRC);
+JUST_API void justBitsetUnion(JustBitset* DST, const JustBitset* SRC);
 
 /**
  * @brief : Computes in -place intersection : DST = DST & SRC
@@ -1617,7 +1618,7 @@ JUST_API void justBitsetUnion(justBitset* DST, const justBitset* SRC);
  * @param DST : The destination justBitset
  * @param SRC : The source justBitset
 */
-JUST_API void justBitsetIntersection(justBitset* DST, const justBitset* SRC);
+JUST_API void justBitsetIntersection(JustBitset* DST, const JustBitset* SRC);
 
 /**
  * @brief : Computes in -place difference : DST = DST & ~SRC
@@ -1626,7 +1627,7 @@ JUST_API void justBitsetIntersection(justBitset* DST, const justBitset* SRC);
  * @param DST : The destination justBitset
  * @param SRC : The source justBitset
 */
-JUST_API void justBitsetDifference(justBitset* DST, const justBitset* SRC);
+JUST_API void justBitsetDifference(JustBitset* DST, const JustBitset* SRC);
 
 /**
  * @brief : Compares two justBitsets for equality
@@ -1634,7 +1635,7 @@ JUST_API void justBitsetDifference(justBitset* DST, const justBitset* SRC);
  * @param B : Second justBitset
  * @return : True if identical in capacity and set bits, false otherwise
  */
-JUST_API bool justBitsetEquals(const justBitset* A, const justBitset* B);
+JUST_API bool justBitsetEquals(const JustBitset* A, const JustBitset* B);
 
 #ifdef __cplusplus
 }
@@ -1649,7 +1650,7 @@ JUST_API bool justBitsetEquals(const justBitset* A, const justBitset* B);
 #include <stdint.h>
 
 JUST_API bool justBitsetCreate(
-  justBitset* SET,
+  JustBitset* SET,
   size_t       CAPACITY,
   void*        USER_BUFFER,
   const char*  TAG)
@@ -1685,7 +1686,7 @@ JUST_API bool justBitsetCreate(
   return true;
 }
 
-JUST_API void justBitsetDestroy(justBitset* SET)
+JUST_API void justBitsetDestroy(JustBitset* SET)
 {
   JUST_ASSERT_DEBUG_MESSAGE(SET != NULL, "[BITSET] : Cannot destroy a NULL set");
 
@@ -1700,7 +1701,7 @@ JUST_API void justBitsetDestroy(justBitset* SET)
   SET->ownsMemory = false;
 }
 
-JUST_API bool justBitsetEquals(const justBitset* A, const justBitset* B)
+JUST_API bool justBitsetEquals(const JustBitset* A, const JustBitset* B)
 {
   JUST_ASSERT_DEBUG_MESSAGE(A != NULL && B != NULL, "[BITSET] : Cannot compare NULL sets");
 
@@ -1718,7 +1719,7 @@ JUST_API bool justBitsetEquals(const justBitset* A, const justBitset* B)
   return ((A->words[lastIdx] & tailMask) == (B->words[lastIdx] & tailMask));
 }
 
-JUST_API void justBitsetUnion(justBitset* DST, const justBitset* SRC)
+JUST_API void justBitsetUnion(JustBitset* DST, const JustBitset* SRC)
 {
   JUST_ASSERT_DEBUG_MESSAGE(DST != NULL && SRC != NULL, "[BITSET] : Cannot union NULL sets");
 
@@ -1732,7 +1733,7 @@ JUST_API void justBitsetUnion(justBitset* DST, const justBitset* SRC)
   }
 }
 
-JUST_API void justBitsetIntersection(justBitset* DST, const justBitset* SRC)
+JUST_API void justBitsetIntersection(JustBitset* DST, const JustBitset* SRC)
 {
   JUST_ASSERT_DEBUG_MESSAGE(DST != NULL && SRC != NULL, "[BITSET] : Cannot intersect NULL bitsets");
 
@@ -1746,7 +1747,7 @@ JUST_API void justBitsetIntersection(justBitset* DST, const justBitset* SRC)
   }
 }
 
-JUST_API void justBitsetDifference(justBitset* DST, const justBitset* SRC)
+JUST_API void justBitsetDifference(JustBitset* DST, const JustBitset* SRC)
 {
   JUST_ASSERT_DEBUG_MESSAGE(DST != NULL && SRC != NULL, "[BITSET] : Cannot difference NULL bitsets");
 
@@ -1795,7 +1796,7 @@ typedef struct justObjectPool
   void*        memory;          ///< Backing memory block
   bool         ownsMemory;      ///< True if pool allocated memory itself
 #ifdef DEBUG
-  justBitset  allocatedBits;   ///< Tracks active allocations to trap double-returns
+  JustBitset  allocatedBits;   ///< Tracks active allocations to trap double-returns
 #endif
 } justObjectPool;
 
@@ -2151,8 +2152,8 @@ typedef struct justDynamicArray
   size_t                  size;         ///< Current number of elements stored
   size_t                  elementSize;  ///< Size of an individual element in bytes
   const char*             tag;          ///< Why are you creating this
-  justLinearAllocator*    allocator;    ///< Optional custom linear allocator, NULL for the vector to manage its own memory
-} justDynamicArray;
+  JustLinearAllocator*    allocator;    ///< Optional custom linear allocator, NULL for the vector to manage its own memory
+} JustDynamicArray;
 
 
 // - - - C API - - - 
@@ -2166,17 +2167,17 @@ typedef struct justDynamicArray
  * @return true if initialized successfully, false otherwise
 */
 JUST_API bool justDynamicArrayCreate(
-  justDynamicArray*    DARRAY, 
+  JustDynamicArray*    DARRAY, 
   size_t               INITIAL_CAPACITY, 
   size_t               ELEMENT_SIZE, 
-  justLinearAllocator* ALLOCATOR,
+  JustLinearAllocator* ALLOCATOR,
   const char*          TAG);
 
 /**
  * @brief : Destroys the dynamic array and releases memory if owned. 
  * @param DARRAY : Pointer to the dynamic array to be destroyed
 */
-JUST_API void justDynamicArrayDestroy(justDynamicArray* DARRAY);
+JUST_API void justDynamicArrayDestroy(JustDynamicArray* DARRAY);
 
 /**
  * @brief : Ensures capacity exists for at least MIN_CAPACITY elements.
@@ -2184,7 +2185,7 @@ JUST_API void justDynamicArrayDestroy(justDynamicArray* DARRAY);
  * @param MIN_CAPACITY : How much to reserve as count of elements 
  * @return : True if successfull and false if not
 */
-JUST_API bool justDynamicArrayReserve(justDynamicArray* DARRAY, size_t MIN_CAPACITY);
+JUST_API bool justDynamicArrayReserve(JustDynamicArray* DARRAY, size_t MIN_CAPACITY);
 
 /**
  * @brief : Internal slow-path growth function
@@ -2192,7 +2193,7 @@ JUST_API bool justDynamicArrayReserve(justDynamicArray* DARRAY, size_t MIN_CAPAC
  * @param DARRAY : The array to be grown
  * @return : True if succesful and false if not
  */
-bool __justDynamicArrayGrow(justDynamicArray* DARRAY);
+bool __justDynamicArrayGrow(JustDynamicArray* DARRAY);
 
 /**
  * @brief : Appends a contigous range of elements via a single block memcpy
@@ -2201,7 +2202,7 @@ bool __justDynamicArrayGrow(justDynamicArray* DARRAY);
  * @param COUNT : How many elements in the buffer
  * @return : True if succesful, false if not
  */
-JUST_API bool justDynamicArrayPushRange(justDynamicArray* DARRAY, const void* SRC_BUFFER, size_t COUNT);
+JUST_API bool justDynamicArrayPushRange(JustDynamicArray* DARRAY, const void* SRC_BUFFER, size_t COUNT);
 
 /**
  * @brief : Reserves a slot at the end and returns a direct pointer to unitialized element memory. Enables zero-copy costruction directly into array storage, and bypasses memcpy
@@ -2209,7 +2210,7 @@ JUST_API bool justDynamicArrayPushRange(justDynamicArray* DARRAY, const void* SR
  * @return : Pointer to the unitialized element
  * @warning : Does not intialize the element, use the pointer to initialize
  */
-JUST_API void* justDynamicArrayEmplace(justDynamicArray* DARRAY);
+JUST_API void* justDynamicArrayEmplace(JustDynamicArray* DARRAY);
 
 /**
  * @brief : Pushes a new element value to the back of the array.
@@ -2218,7 +2219,7 @@ JUST_API void* justDynamicArrayEmplace(justDynamicArray* DARRAY);
  * @warning : VALUE_PTR's value will be copied
  * @return : True if push was succesful, false if not 
 */
-JUST_API static inline bool justDynamicArrayPush(justDynamicArray* DARRAY, const void* VALUE_PTR)
+JUST_API static inline bool justDynamicArrayPush(JustDynamicArray* DARRAY, const void* VALUE_PTR)
 {
   JUST_ASSERT_DEBUG_MESSAGE(DARRAY != NULL, "[DYNAMIC DARRAY] : Cannot push into null DARRAY");
   JUST_ASSERT_DEBUG_MESSAGE(VALUE_PTR != NULL, "[DYNAMIC DARRAY] : Cannot push a null VALUE_PTR");
@@ -2236,7 +2237,7 @@ JUST_API static inline bool justDynamicArrayPush(justDynamicArray* DARRAY, const
  * @warning : the size of OUT_VALUE_PTR should be big enough to store the element
  * @return : whether the pop was successfull
 */
-JUST_API static inline bool justDynamicArrayPop(justDynamicArray* DARRAY, void* OUT_VALUE_PTR)
+JUST_API static inline bool justDynamicArrayPop(JustDynamicArray* DARRAY, void* OUT_VALUE_PTR)
 {
   JUST_ASSERT_DEBUG_MESSAGE(DARRAY != NULL, "[DYNAMIC DARRAY] : Cannot Pop from a NULL DARRAY");
 
@@ -2264,7 +2265,7 @@ JUST_API static inline bool justDynamicArrayPop(justDynamicArray* DARRAY, void* 
  * @warning : Since this returns a void*, you can override it directly, but be careful, since you get access to the memory underneath
  * @return : A pointer to the object in the array at the given index
 */
-JUST_API static inline void* justDynamicArrayAt(const justDynamicArray* DARRAY, size_t INDEX)
+JUST_API static inline void* justDynamicArrayAt(const JustDynamicArray* DARRAY, size_t INDEX)
 {
   JUST_ASSERT_DEBUG_MESSAGE(DARRAY != NULL, "[DYNAMIC DARRAY] : Cannot access a NULL DARRAY");
   JUST_ASSERT_DEBUG_MESSAGE(INDEX < DARRAY->size, "[DYNAMIC DARRAY] : INDEX out of bounds");
@@ -2276,7 +2277,7 @@ JUST_API static inline void* justDynamicArrayAt(const justDynamicArray* DARRAY, 
  * @brief : Clears all elements without freeing memory.
  * @param DARRAY : A pointer to the array to be cleared
 */
-JUST_API static inline void justDynamicArrayClear(justDynamicArray* DARRAY)
+JUST_API static inline void justDynamicArrayClear(JustDynamicArray* DARRAY)
 {
   JUST_ASSERT_DEBUG_MESSAGE(DARRAY != NULL, "[DYNAMIC DARRAY] : Cannot clear a NULL DARRAY");
   DARRAY->size = 0;
@@ -2287,7 +2288,7 @@ JUST_API static inline void justDynamicArrayClear(justDynamicArray* DARRAY)
  * @param DARRAY : Pointer to the dynamic array
  * @return : size of the array in terms of how many elements
  */
-JUST_API static inline size_t justDynamicArraySize(const justDynamicArray* DARRAY)
+JUST_API static inline size_t justDynamicArraySize(const JustDynamicArray* DARRAY)
 {
   JUST_ASSERT_DEBUG_MESSAGE(DARRAY != NULL, "[DYNAMIC DARRAY] : Cannot size a NULL DARRAY");
   return DARRAY->size;
@@ -2298,7 +2299,7 @@ JUST_API static inline size_t justDynamicArraySize(const justDynamicArray* DARRA
  * @param DARRAY : Pointer to the dynamic array
  * @return : capacity of the array in terms of how many elements
  */
-JUST_API static inline size_t justDynamicArrayCapacity(const justDynamicArray* DARRAY)
+JUST_API static inline size_t justDynamicArrayCapacity(const JustDynamicArray* DARRAY)
 {
   JUST_ASSERT_DEBUG_MESSAGE(DARRAY != NULL, "[DYNAMIC DARRAY] : Cannot check capacity of a NULL DARRAY");
   return DARRAY->capacity;
@@ -2309,7 +2310,7 @@ JUST_API static inline size_t justDynamicArrayCapacity(const justDynamicArray* D
  * @param DARRAY : Pointer to the dynamic array
  * @return : true if empty, false otherwise
  */
-JUST_API static inline bool justDynamicArrayIsEmpty(const justDynamicArray* DARRAY)
+JUST_API static inline bool justDynamicArrayIsEmpty(const JustDynamicArray* DARRAY)
 {
   return (DARRAY->size == 0);
 }
@@ -2319,7 +2320,7 @@ JUST_API static inline bool justDynamicArrayIsEmpty(const justDynamicArray* DARR
  * @param DARRAY : Pointer to the dynamic array to be shrunk
  * @return : True if the array shrunk, false otherwise
  */
-JUST_API bool justDynamicArrayShrinkToFit(justDynamicArray* DARRAY);
+JUST_API bool justDynamicArrayShrinkToFit(JustDynamicArray* DARRAY);
 
 
 // - - - Helper Macros for Ergonomic Usage - - - 
@@ -2380,10 +2381,10 @@ JUST_API bool justDynamicArrayShrinkToFit(justDynamicArray* DARRAY);
 #include <string.h>
 
 bool justDynamicArrayCreate(
-  justDynamicArray*    DARRAY,
+  JustDynamicArray*    DARRAY,
   size_t                INITIAL_CAPACITY,
   size_t                ELEMENT_SIZE,
-  justLinearAllocator* ALLOCATOR,
+  JustLinearAllocator* ALLOCATOR,
   const char*           TAG)
 {
   JUST_ASSERT_DEBUG_MESSAGE(DARRAY != NULL, "[DYNAMIC DARRAY] : Cannot create a NULL DARRAY");
@@ -2419,7 +2420,7 @@ bool justDynamicArrayCreate(
   return true;
 }
 
-void justDynamicArrayDestroy(justDynamicArray* DARRAY)
+void justDynamicArrayDestroy(JustDynamicArray* DARRAY)
 {
   JUST_ASSERT_DEBUG_MESSAGE(DARRAY != NULL, "[DYNAMIC DARRAY] : Cannot destroy a NULL array.");
 
@@ -2435,7 +2436,7 @@ void justDynamicArrayDestroy(justDynamicArray* DARRAY)
   DARRAY->allocator    = NULL;
 }
 
-bool justDynamicArrayReserve(justDynamicArray* DARRAY, size_t MIN_CAPACITY)
+bool justDynamicArrayReserve(JustDynamicArray* DARRAY, size_t MIN_CAPACITY)
 {
   JUST_ASSERT_DEBUG_MESSAGE(DARRAY != NULL, "[DYNAMIC DARRAY] : Cannot reserve capcity in a NULL DARRAY");
 
@@ -2475,7 +2476,7 @@ bool justDynamicArrayReserve(justDynamicArray* DARRAY, size_t MIN_CAPACITY)
   return true;
 }
 
-bool __justDynamicArrayGrow(justDynamicArray* DARRAY)
+bool __justDynamicArrayGrow(JustDynamicArray* DARRAY)
 {
   JUST_ASSERT_DEBUG(DARRAY != NULL);
 
@@ -2483,7 +2484,7 @@ bool __justDynamicArrayGrow(justDynamicArray* DARRAY)
   return justDynamicArrayReserve(DARRAY, targetCap);
 }
 
-bool justDynamicArrayPushRange(justDynamicArray* DARRAY, const void* SRC_BUFFER, size_t COUNT)
+bool justDynamicArrayPushRange(JustDynamicArray* DARRAY, const void* SRC_BUFFER, size_t COUNT)
 {
   JUST_ASSERT_DEBUG(DARRAY != NULL);
   if (!SRC_BUFFER || COUNT == 0) return true;
@@ -2504,7 +2505,7 @@ bool justDynamicArrayPushRange(justDynamicArray* DARRAY, const void* SRC_BUFFER,
   return true;
 }
 
-bool justDynamicArrayShrinkToFit(justDynamicArray* DARRAY)
+bool justDynamicArrayShrinkToFit(JustDynamicArray* DARRAY)
 {
   JUST_ASSERT_DEBUG_MESSAGE(DARRAY != NULL, "[DYNAMIC DARRAY] : Cannot shrink a NULL DARRAY");
 
@@ -2544,7 +2545,7 @@ bool justDynamicArrayShrinkToFit(justDynamicArray* DARRAY)
   return true;
 }
 
-JUST_API void* justDynamicArrayEmplace(justDynamicArray* DARRAY)
+JUST_API void* justDynamicArrayEmplace(JustDynamicArray* DARRAY)
 {
   JUST_ASSERT_DEBUG_MESSAGE(DARRAY != NULL, "[DYNAMIC DARRAY] : Cannot emplace in a NULL array");
 
@@ -2581,7 +2582,7 @@ JUST_API void* justDynamicArrayEmplace(justDynamicArray* DARRAY)
 /// @brief : Stack just has an underlying dynamic Array 
 typedef struct justStack 
 {
-  justDynamicArray array; ///< The underlying dynamic Array
+  JustDynamicArray array; ///< The underlying dynamic Array
 } JustStack;
 
 /**
@@ -2596,7 +2597,7 @@ JUST_API static inline bool justStackCreate(
   JustStack*           STACK,
   size_t               INITIAL_CAPACITY,
   size_t               ELEMENT_SIZE,
-  justLinearAllocator* ALLOCATOR,
+  JustLinearAllocator* ALLOCATOR,
   const char*          TAG)
 {
   JUST_ASSERT_DEBUG_MESSAGE(STACK != NULL, "[STACK] : Cannot create a NULL STACK");
@@ -2758,7 +2759,7 @@ typedef struct justQueue
   size_t                tail;         ///< Next write index
   size_t                elementSize;  ///< sizeof(T)
   const char*           tag;          ///< WHy create this queue
-  justLinearAllocator*  allocator;    ///< Optional linear allocator, NULL for system heap
+  JustLinearAllocator*  allocator;    ///< Optional linear allocator, NULL for system heap
 } JustQueue;
 
 /**
@@ -2774,7 +2775,7 @@ JUST_API bool justQueueCreate(
   JustQueue*            QUEUE, 
   size_t                INITIAL_CAPACITY,
   size_t                ELEMENT_SIZE,
-  justLinearAllocator*  ALLOCATOR,
+  JustLinearAllocator*  ALLOCATOR,
   const char*           TAG);
 
 /**
@@ -2984,7 +2985,7 @@ JUST_API bool justQueueCreate(
   JustQueue*           QUEUE,
   size_t                INITIAL_CAPACITY,
   size_t                ELEMENT_SIZE,
-  justLinearAllocator* ALLOCATOR,
+  JustLinearAllocator* ALLOCATOR,
   const char*           TAG)
 {
   JUST_ASSERT_DEBUG_MESSAGE(QUEUE != NULL, "[QUEUE] : Cannot create a NULL queue");
@@ -3147,7 +3148,7 @@ typedef struct justRingBuffer
   size_t                count;          ///< Active item count
   bool                  allowOverwrite; ///< Overwrite oldest item when full
   const char*           tag;            ///< Memory tracking tag
-  justLinearAllocator* allocator;      ///< Optional linear allocator (NULL for heap)
+  JustLinearAllocator* allocator;      ///< Optional linear allocator (NULL for heap)
 } JustRingBuffer;
 
 /**
@@ -3165,7 +3166,7 @@ JUST_API bool justRingBufferCreate(
   size_t               CAPACITY,
   size_t               ELEMENT_SIZE,
   bool                 ALLOW_OVERWRITE,
-  justLinearAllocator* ALLOCATOR,
+  JustLinearAllocator* ALLOCATOR,
   const char*          TAG);
 
 JUST_API void justRingBufferDestroy(JustRingBuffer* RING);
@@ -3371,7 +3372,7 @@ JUST_API bool justRingBufferCreate(
   size_t               CAPACITY,
   size_t               ELEMENT_SIZE,
   bool                 ALLOW_OVERWRITE,
-  justLinearAllocator* ALLOCATOR,
+  JustLinearAllocator* ALLOCATOR,
   const char*          TAG)
 {
   JUST_ASSERT_DEBUG_MESSAGE(RING != NULL, "[RING BUFFER] : Target pointer cannot be NULL");
@@ -3485,7 +3486,7 @@ typedef struct justAVLTree
   size_t                elementSize;  ///< How big is an element in bytes
   justCompareFunc      compare;      ///< Compare function
   const char*           tag;          ///< Why was this tree created
-  justLinearAllocator* allocator;    ///< Optional linear allocator
+  JustLinearAllocator* allocator;    ///< Optional linear allocator
 } JustAVLTree;
 
 typedef JustAVLTree OrderedSet;
@@ -3503,7 +3504,7 @@ JUST_API bool justOrderedSetCreate(
   JustAVLTree*         TREE,
   size_t                ELEMENT_SIZE,
   justCompareFunc      COMPARATOR,
-  justLinearAllocator* ALLOCATOR,
+  JustLinearAllocator* ALLOCATOR,
   const char*           TAG);
 
 /**
@@ -3859,7 +3860,7 @@ JUST_API bool justOrderedSetCreate(
   JustAVLTree*         TREE,
   size_t               ELEMENT_SIZE,
   justCompareFunc      COMPARATOR,
-  justLinearAllocator* ALLOCATOR,
+  JustLinearAllocator* ALLOCATOR,
   const char*          TAG)
 {
   JUST_ASSERT_DEBUG_MESSAGE(TREE != NULL, "[ORDERED SET] : Target pointer cannot be NULL");
@@ -3998,20 +3999,20 @@ typedef enum justHashMapEntryState
 /// @brief : Hashmap view
 typedef struct justHashMap
 {
-  uint8_t*                slots;          ///< Interleaved flat array of slots
-  size_t                  capacity;       ///< Always a power of 2
-  size_t                  mask;           ///< capacity - 1
-  size_t                  count;          ///< Active key-vale pairs
-  size_t                  tombstoneCount; ///< Dead slots 
-  size_t                  keySize;        ///< Key size in bytes
-  size_t                  valueSize;      ///< Value size in bytes
-  size_t                  slotStride;     ///< Total bytes per slot (aligned)
-  size_t                  keyOffset;      ///< Byte offset of key inside slot
-  size_t                  valueOffset;    ///< Byte offset of value inside slot
+  uint8_t*               slots;          ///< Interleaved flat array of slots
+  size_t                 capacity;       ///< Always a power of 2
+  size_t                 mask;           ///< capacity - 1
+  size_t                 count;          ///< Active key-vale pairs
+  size_t                 tombstoneCount; ///< Dead slots 
+  size_t                 keySize;        ///< Key size in bytes
+  size_t                 valueSize;      ///< Value size in bytes
+  size_t                 slotStride;     ///< Total bytes per slot (aligned)
+  size_t                 keyOffset;      ///< Byte offset of key inside slot
+  size_t                 valueOffset;    ///< Byte offset of value inside slot
   justHashFunction       hashFunction;
   justKeyCompareFunction compareFunction;
-  justLinearAllocator*   allocator;
-  const char*             tag;            ///< Why make this hashmap
+  JustLinearAllocator*   allocator;
+  const char*            tag;            ///< Why make this hashmap
 } JustHashMap;
 
 /**
@@ -4034,7 +4035,7 @@ JUST_API bool justHashmapCreate(
   size_t                 INITIAL_CAPACITY,
   justHashFunction       HASHER,
   justKeyCompareFunction COMPARATOR,
-  justLinearAllocator*   ALLOCATOR,
+  JustLinearAllocator*   ALLOCATOR,
   const char*            TAG);
 
 /**
@@ -4216,7 +4217,7 @@ JUST_API bool justHashmapCreate(
   size_t                 INITIAL_CAPACITY,
   justHashFunction       HASHER,
   justKeyCompareFunction COMPARATOR,
-  justLinearAllocator*   ALLOCATOR,
+  JustLinearAllocator*   ALLOCATOR,
   const char*            TAG)
 {
   JUST_ASSERT_DEBUG_MESSAGE(MAP != NULL, "[HASH MAP] : Cannot create a NULL Hashmap");
@@ -5374,7 +5375,7 @@ typedef struct justThreadPool
   size_t                activeWorkers;  ///< Workers currently executing a task
   bool                  shutdown;       ///< Shutdown flag
   const char*           tag;            ///< Memory tracking tag
-  justLinearAllocator* allocator;      ///< Optional linear allocator
+  JustLinearAllocator* allocator;      ///< Optional linear allocator
 } justThreadPool;
 
 /**
@@ -5390,7 +5391,7 @@ JUST_API bool justThreadpoolCreate(
   justThreadPool*      POOL,
   size_t               THREAD_COUNT,
   size_t               QUEUE_CAPACITY,
-  justLinearAllocator* ALLOCATOR,
+  JustLinearAllocator* ALLOCATOR,
   const char*          TAG);
 
 /**
@@ -5492,7 +5493,7 @@ JUST_API bool justThreadpoolCreate(
   justThreadPool*      POOL,
   size_t               THREAD_COUNT,
   size_t               QUEUE_CAPACITY,
-  justLinearAllocator* ALLOCATOR,
+  JustLinearAllocator* ALLOCATOR,
   const char*          TAG)
 {
   JUST_ASSERT_DEBUG_MESSAGE(POOL != NULL, "[THREAD POOL] : Target pool cannot be NULL");

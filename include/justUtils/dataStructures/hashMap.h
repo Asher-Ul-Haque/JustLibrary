@@ -77,7 +77,7 @@ typedef struct justHashMap
   size_t                  valueOffset;    ///< Byte offset of value inside slot
   justHashFunction       hashFunction;
   justKeyCompareFunction compareFunction;
-  justLinearAllocator*   allocator;
+  JustLinearAllocator*   allocator;
   const char*             tag;            ///< Why make this hashmap
 } JustHashMap;
 
@@ -101,7 +101,7 @@ JUST_API bool justHashmapCreate(
   size_t                 INITIAL_CAPACITY,
   justHashFunction       HASHER,
   justKeyCompareFunction COMPARATOR,
-  justLinearAllocator*   ALLOCATOR,
+  JustLinearAllocator*   ALLOCATOR,
   const char*            TAG);
 
 /**

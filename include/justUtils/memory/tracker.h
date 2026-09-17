@@ -128,7 +128,7 @@ JUST_API size_t justMemoryGetActiveBytes(const char* TAG);
  * @warning : just for debugging, not for actually parsing memory usage
  * @see : memoryGetActiveBytes for better usage API
 */
-JUST_API void justMemoryLogUsageStr(bool VERBOSE);
+JUST_API void justMemoryLogUsage(bool VERBOSE);
 
 /**
  * @brief : Sets a limit on the memory allocation of a particular type

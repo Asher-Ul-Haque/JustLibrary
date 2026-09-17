@@ -51,9 +51,9 @@ typedef struct justObjectPool
   void*        memory;          ///< Backing memory block
   bool         ownsMemory;      ///< True if pool allocated memory itself
 #ifdef DEBUG
-  justBitset  allocatedBits;   ///< Tracks active allocations to trap double-returns
+  JustBitset  allocatedBits;   ///< Tracks active allocations to trap double-returns
 #endif
-} justObjectPool;
+} JustObjectPool;
 
 /**
  * @brief : ObjectPool creation function, the struct itself is the config, set fields before calling this function 
@@ -65,7 +65,7 @@ typedef struct justObjectPool
  * @return : True on success, false on fail
 */
 JUST_API bool justObjectPoolCreate(
-  justObjectPool*  POOL,
+  JustObjectPool*  POOL,
   size_t            CAPACITY,
   size_t            OBJECT_SIZE,
   size_t            ALIGNMENT,
@@ -77,27 +77,27 @@ JUST_API bool justObjectPoolCreate(
  * @param POOL : a pointer to the pool from which the object is to be taken 
  * @return : Pointer to object, or NULL if full and cannot resize
 */
-JUST_API void* justObjectPoolTakeObject(justObjectPool* POOL);
+JUST_API void* justObjectPoolTakeObject(JustObjectPool* POOL);
 
 /**
  * @brief : Returns an object back to the pool for reuse 
  * @param POOL : the pool to be returned to 
  * @param OBJECT : the object to be returned
 */
-JUST_API void justObjectPoolReturnObject(justObjectPool* POOL, void* OBJECT);
+JUST_API void justObjectPoolReturnObject(JustObjectPool* POOL, void* OBJECT);
 
 /**
  * @brief : Destroys the Object Pool and frees backing memory if owned 
  * @param POOL : Pointer to the pool to be destroyed 
 */
-JUST_API void justObjectPoolDestroy(justObjectPool* POOL);
+JUST_API void justObjectPoolDestroy(JustObjectPool* POOL);
 
 /**
  * @brief : Returns true if no objects are currently taken from the pool.
  * @param POOL : Pointer to the pool
  * @return : whether the pool is empty
  */
-JUST_API static inline bool justObjectPoolIsEmpty(const justObjectPool* POOL)
+JUST_API static inline bool justObjectPoolIsEmpty(const JustObjectPool* POOL)
 {
   JUST_ASSERT_DEBUG_MESSAGE(POOL != NULL, "[OBJECT POOL] : Cannot check if a NULL POOL is empty");
   return POOL->freeCount == POOL->capacity;
@@ -108,7 +108,7 @@ JUST_API static inline bool justObjectPoolIsEmpty(const justObjectPool* POOL)
  * @param POOL : Pointer to the pool
  * @return : whether the pool is full
  */
-JUST_API static inline bool justObjectPoolIsFull(const justObjectPool* POOL)
+JUST_API static inline bool justObjectPoolIsFull(const JustObjectPool* POOL)
 {
   JUST_ASSERT_DEBUG_MESSAGE(POOL != NULL, "[OBJECT POOL] : Cannot check if a NULL POOL is full");
   return POOL->freeCount == 0;
@@ -117,7 +117,7 @@ JUST_API static inline bool justObjectPoolIsFull(const justObjectPool* POOL)
  * @brief : debug pritns the object pool in debug mode, does nothing in release mode 
  * @param POOL : a pointer to the pool to be visualized
 */
-JUST_API void justObjectPoolDebugPrint(const justObjectPool* POOL);
+JUST_API void justObjectPoolDebugPrint(const JustObjectPool* POOL);
 
 
 #ifdef __cplusplus

@@ -53,7 +53,7 @@ typedef struct justRingBuffer
   size_t                count;          ///< Active item count
   bool                  allowOverwrite; ///< Overwrite oldest item when full
   const char*           tag;            ///< Memory tracking tag
-  justLinearAllocator* allocator;      ///< Optional linear allocator (NULL for heap)
+  JustLinearAllocator* allocator;      ///< Optional linear allocator (NULL for heap)
 } JustRingBuffer;
 
 /**
@@ -71,7 +71,7 @@ JUST_API bool justRingBufferCreate(
   size_t               CAPACITY,
   size_t               ELEMENT_SIZE,
   bool                 ALLOW_OVERWRITE,
-  justLinearAllocator* ALLOCATOR,
+  JustLinearAllocator* ALLOCATOR,
   const char*          TAG);
 
 JUST_API void justRingBufferDestroy(JustRingBuffer* RING);

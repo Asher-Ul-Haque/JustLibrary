@@ -48,8 +48,8 @@ typedef struct justDynamicArray
   size_t                  size;         ///< Current number of elements stored
   size_t                  elementSize;  ///< Size of an individual element in bytes
   const char*             tag;          ///< Why are you creating this
-  justLinearAllocator*    allocator;    ///< Optional custom linear allocator, NULL for the vector to manage its own memory
-} justDynamicArray;
+  JustLinearAllocator*    allocator;    ///< Optional custom linear allocator, NULL for the vector to manage its own memory
+} JustDynamicArray;
 
 
 // - - - C API - - - 
@@ -63,17 +63,17 @@ typedef struct justDynamicArray
  * @return true if initialized successfully, false otherwise
 */
 JUST_API bool justDynamicArrayCreate(
-  justDynamicArray*    DARRAY, 
+  JustDynamicArray*    DARRAY, 
   size_t               INITIAL_CAPACITY, 
   size_t               ELEMENT_SIZE, 
-  justLinearAllocator* ALLOCATOR,
+  JustLinearAllocator* ALLOCATOR,
   const char*          TAG);
 
 /**
  * @brief : Destroys the dynamic array and releases memory if owned. 
  * @param DARRAY : Pointer to the dynamic array to be destroyed
 */
-JUST_API void justDynamicArrayDestroy(justDynamicArray* DARRAY);
+JUST_API void justDynamicArrayDestroy(JustDynamicArray* DARRAY);
 
 /**
  * @brief : Ensures capacity exists for at least MIN_CAPACITY elements.
@@ -81,7 +81,7 @@ JUST_API void justDynamicArrayDestroy(justDynamicArray* DARRAY);
  * @param MIN_CAPACITY : How much to reserve as count of elements 
  * @return : True if successfull and false if not
 */
-JUST_API bool justDynamicArrayReserve(justDynamicArray* DARRAY, size_t MIN_CAPACITY);
+JUST_API bool justDynamicArrayReserve(JustDynamicArray* DARRAY, size_t MIN_CAPACITY);
 
 /**
  * @brief : Internal slow-path growth function
@@ -89,7 +89,7 @@ JUST_API bool justDynamicArrayReserve(justDynamicArray* DARRAY, size_t MIN_CAPAC
  * @param DARRAY : The array to be grown
  * @return : True if succesful and false if not
  */
-bool __justDynamicArrayGrow(justDynamicArray* DARRAY);
+bool __justDynamicArrayGrow(JustDynamicArray* DARRAY);
 
 /**
  * @brief : Appends a contigous range of elements via a single block memcpy
@@ -98,7 +98,7 @@ bool __justDynamicArrayGrow(justDynamicArray* DARRAY);
  * @param COUNT : How many elements in the buffer
  * @return : True if succesful, false if not
  */
-JUST_API bool justDynamicArrayPushRange(justDynamicArray* DARRAY, const void* SRC_BUFFER, size_t COUNT);
+JUST_API bool justDynamicArrayPushRange(JustDynamicArray* DARRAY, const void* SRC_BUFFER, size_t COUNT);
 
 /**
  * @brief : Reserves a slot at the end and returns a direct pointer to unitialized element memory. Enables zero-copy costruction directly into array storage, and bypasses memcpy
@@ -106,7 +106,7 @@ JUST_API bool justDynamicArrayPushRange(justDynamicArray* DARRAY, const void* SR
  * @return : Pointer to the unitialized element
  * @warning : Does not intialize the element, use the pointer to initialize
  */
-JUST_API void* justDynamicArrayEmplace(justDynamicArray* DARRAY);
+JUST_API void* justDynamicArrayEmplace(JustDynamicArray* DARRAY);
 
 /**
  * @brief : Pushes a new element value to the back of the array.
@@ -115,7 +115,7 @@ JUST_API void* justDynamicArrayEmplace(justDynamicArray* DARRAY);
  * @warning : VALUE_PTR's value will be copied
  * @return : True if push was succesful, false if not 
 */
-JUST_API static inline bool justDynamicArrayPush(justDynamicArray* DARRAY, const void* VALUE_PTR)
+JUST_API static inline bool justDynamicArrayPush(JustDynamicArray* DARRAY, const void* VALUE_PTR)
 {
   JUST_ASSERT_DEBUG_MESSAGE(DARRAY != NULL, "[DYNAMIC DARRAY] : Cannot push into null DARRAY");
   JUST_ASSERT_DEBUG_MESSAGE(VALUE_PTR != NULL, "[DYNAMIC DARRAY] : Cannot push a null VALUE_PTR");
@@ -133,7 +133,7 @@ JUST_API static inline bool justDynamicArrayPush(justDynamicArray* DARRAY, const
  * @warning : the size of OUT_VALUE_PTR should be big enough to store the element
  * @return : whether the pop was successfull
 */
-JUST_API static inline bool justDynamicArrayPop(justDynamicArray* DARRAY, void* OUT_VALUE_PTR)
+JUST_API static inline bool justDynamicArrayPop(JustDynamicArray* DARRAY, void* OUT_VALUE_PTR)
 {
   JUST_ASSERT_DEBUG_MESSAGE(DARRAY != NULL, "[DYNAMIC DARRAY] : Cannot Pop from a NULL DARRAY");
 
@@ -161,7 +161,7 @@ JUST_API static inline bool justDynamicArrayPop(justDynamicArray* DARRAY, void* 
  * @warning : Since this returns a void*, you can override it directly, but be careful, since you get access to the memory underneath
  * @return : A pointer to the object in the array at the given index
 */
-JUST_API static inline void* justDynamicArrayAt(const justDynamicArray* DARRAY, size_t INDEX)
+JUST_API static inline void* justDynamicArrayAt(const JustDynamicArray* DARRAY, size_t INDEX)
 {
   JUST_ASSERT_DEBUG_MESSAGE(DARRAY != NULL, "[DYNAMIC DARRAY] : Cannot access a NULL DARRAY");
   JUST_ASSERT_DEBUG_MESSAGE(INDEX < DARRAY->size, "[DYNAMIC DARRAY] : INDEX out of bounds");
@@ -173,7 +173,7 @@ JUST_API static inline void* justDynamicArrayAt(const justDynamicArray* DARRAY, 
  * @brief : Clears all elements without freeing memory.
  * @param DARRAY : A pointer to the array to be cleared
 */
-JUST_API static inline void justDynamicArrayClear(justDynamicArray* DARRAY)
+JUST_API static inline void justDynamicArrayClear(JustDynamicArray* DARRAY)
 {
   JUST_ASSERT_DEBUG_MESSAGE(DARRAY != NULL, "[DYNAMIC DARRAY] : Cannot clear a NULL DARRAY");
   DARRAY->size = 0;
@@ -184,7 +184,7 @@ JUST_API static inline void justDynamicArrayClear(justDynamicArray* DARRAY)
  * @param DARRAY : Pointer to the dynamic array
  * @return : size of the array in terms of how many elements
  */
-JUST_API static inline size_t justDynamicArraySize(const justDynamicArray* DARRAY)
+JUST_API static inline size_t justDynamicArraySize(const JustDynamicArray* DARRAY)
 {
   JUST_ASSERT_DEBUG_MESSAGE(DARRAY != NULL, "[DYNAMIC DARRAY] : Cannot size a NULL DARRAY");
   return DARRAY->size;
@@ -195,7 +195,7 @@ JUST_API static inline size_t justDynamicArraySize(const justDynamicArray* DARRA
  * @param DARRAY : Pointer to the dynamic array
  * @return : capacity of the array in terms of how many elements
  */
-JUST_API static inline size_t justDynamicArrayCapacity(const justDynamicArray* DARRAY)
+JUST_API static inline size_t justDynamicArrayCapacity(const JustDynamicArray* DARRAY)
 {
   JUST_ASSERT_DEBUG_MESSAGE(DARRAY != NULL, "[DYNAMIC DARRAY] : Cannot check capacity of a NULL DARRAY");
   return DARRAY->capacity;
@@ -206,7 +206,7 @@ JUST_API static inline size_t justDynamicArrayCapacity(const justDynamicArray* D
  * @param DARRAY : Pointer to the dynamic array
  * @return : true if empty, false otherwise
  */
-JUST_API static inline bool justDynamicArrayIsEmpty(const justDynamicArray* DARRAY)
+JUST_API static inline bool justDynamicArrayIsEmpty(const JustDynamicArray* DARRAY)
 {
   return (DARRAY->size == 0);
 }
@@ -216,7 +216,7 @@ JUST_API static inline bool justDynamicArrayIsEmpty(const justDynamicArray* DARR
  * @param DARRAY : Pointer to the dynamic array to be shrunk
  * @return : True if the array shrunk, false otherwise
  */
-JUST_API bool justDynamicArrayShrinkToFit(justDynamicArray* DARRAY);
+JUST_API bool justDynamicArrayShrinkToFit(JustDynamicArray* DARRAY);
 
 
 // - - - Helper Macros for Ergonomic Usage - - - 
