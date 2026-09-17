@@ -4124,8 +4124,18 @@ JUST_API static inline bool justHashmapIsEmpty(const JustHashMap* MAP)
 
 #define JUST_HASHMAP_INIT(MAP_PTR, KEY_TYPE, VAL_TYPE, CAP) JUST_HASHMAP_INIT_TAGGED(MAP_PTR, KEY_TYPE, VAL_TYPE, CAP, "HASH MAP")
 
-#define JUST_HASHMAP_GET(MAP_PTR, VAL_TYPE, KEY_PTR) \
-  ((VAL_TYPE*) justHashmapGet((MAP_PTR), (KEY_PTR)))
+#define JUST_HASHMAP_GET(MAP_PTR, VAL_TYPE, KEY) \
+  (*(VAL_TYPE*)justHashmapGet((MAP_PTR), &(KEY)))
+
+#define JUST_HASHMAP_GET_OR_DEFAULT(MAP_PTR, VAL_TYPE, KEY, DEFAULT_VAL)  \
+  (                                                                       \
+    justHashmapGet((MAP_PTR), &(KEY))                                     \
+        ? *(VAL_TYPE*)justHashmapGet((MAP_PTR), &(KEY))                   \
+        : (DEFAULT_VAL)                                                   \
+  )
+
+#define JUST_HASHMAP_SET(MAP_PTR, KEY, VAL) \
+  justHashmapSet((MAP_PTR), &(KEY), &(VAL))
 
 #ifdef __cplusplus
 }
@@ -4396,7 +4406,7 @@ JUST_API bool justHashmapSet(JustHashMap* MAP, const void* KEY_PTR, const void* 
     targetHeader->state = JUST_MAP_OCCUPIED;
 
     memcpy(getKeyPtr(MAP, targetIndex), KEY_PTR, MAP->keySize);
-    memcpy(getKeyPtr(MAP, targetIndex), VALUE_PTR, MAP->valueSize);
+    memcpy(getValPtr(MAP, targetIndex), VALUE_PTR, MAP->valueSize);
     MAP->count++;
     return true;
   }

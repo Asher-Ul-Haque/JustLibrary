@@ -261,7 +261,7 @@ JUST_API bool justHashmapSet(JustHashMap* MAP, const void* KEY_PTR, const void* 
     targetHeader->state = JUST_MAP_OCCUPIED;
 
     memcpy(getKeyPtr(MAP, targetIndex), KEY_PTR, MAP->keySize);
-    memcpy(getKeyPtr(MAP, targetIndex), VALUE_PTR, MAP->valueSize);
+    memcpy(getValPtr(MAP, targetIndex), VALUE_PTR, MAP->valueSize);
     MAP->count++;
     return true;
   }
