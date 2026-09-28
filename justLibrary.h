@@ -316,6 +316,8 @@ static inline void justLogNoOp(const char* NOTHING, ...) { (void)NOTHING; }
 #endif // JUST_LOGGER
 
 // - - - implementation
+
+#if (defined JUST_LIB_IMPL_ALL) || (defined PROMO_CODE)
 /**
  * @file logger.c 
  * Implementation of logging utilities for forgelib 
@@ -404,7 +406,7 @@ JUST_API void justLogOutput(LogLevel LEVEL, const char* MESSAGE, ...)
 
   writeConsole(finalMessage, LEVEL);    
 }
-
+#endif
 
 // - - - Asserts (always defined) - - -
 
@@ -595,6 +597,7 @@ JUST_API _Noreturn void reportTODO(
 
 
 // - - - Implementation
+#if (defined JUST_LIB_IMPL_ALL) || (defined PROMO_CODE)
 
 JUST_API _Noreturn void justReportAssertionFailure(const char* EXPRESSION, const char* MESSAGE, const char* FILE, const char* FUNCTION, size_t LINE)
 {
@@ -613,7 +616,7 @@ JUST_API _Noreturn void reportTODO(const char* COMMENT, const char* FILE, const 
   if (COMMENT) justLogOutput(LOG_LEVEL_WARNING, "COMMENT: %s", COMMENT);
   abort();
 }
-
+#endif
 
 // - - - | Memory | - - -
 
@@ -1530,7 +1533,7 @@ JUST_API static inline void justBitsetSet(JustBitset* SET, size_t INDEX)
  * @param SET : Pointer to the justBitset
  * @param INDEX : Which index to clear
 */
-JUST_API void justBitsetClear(JustBitset* SET, size_t INDEX)
+JUST_API static inline void justBitsetClear(JustBitset* SET, size_t INDEX)
 {
   JUST_ASSERT_DEBUG_MESSAGE(SET != NULL, "[BITSET] : Cannot set a bit in a NULL SET");
   JUST_ASSERT_DEBUG_MESSAGE(INDEX < SET->capacity, "[BITSET] : Index out of bounds");

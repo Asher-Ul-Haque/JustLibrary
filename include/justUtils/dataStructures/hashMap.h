@@ -65,20 +65,20 @@ typedef enum justHashMapEntryState
 /// @brief : Hashmap view
 typedef struct justHashMap
 {
-  uint8_t*                slots;          ///< Interleaved flat array of slots
-  size_t                  capacity;       ///< Always a power of 2
-  size_t                  mask;           ///< capacity - 1
-  size_t                  count;          ///< Active key-vale pairs
-  size_t                  tombstoneCount; ///< Dead slots 
-  size_t                  keySize;        ///< Key size in bytes
-  size_t                  valueSize;      ///< Value size in bytes
-  size_t                  slotStride;     ///< Total bytes per slot (aligned)
-  size_t                  keyOffset;      ///< Byte offset of key inside slot
-  size_t                  valueOffset;    ///< Byte offset of value inside slot
+  uint8_t*               slots;          ///< Interleaved flat array of slots
+  size_t                 capacity;       ///< Always a power of 2
+  size_t                 mask;           ///< capacity - 1
+  size_t                 count;          ///< Active key-vale pairs
+  size_t                 tombstoneCount; ///< Dead slots 
+  size_t                 keySize;        ///< Key size in bytes
+  size_t                 valueSize;      ///< Value size in bytes
+  size_t                 slotStride;     ///< Total bytes per slot (aligned)
+  size_t                 keyOffset;      ///< Byte offset of key inside slot
+  size_t                 valueOffset;    ///< Byte offset of value inside slot
   justHashFunction       hashFunction;
   justKeyCompareFunction compareFunction;
   JustLinearAllocator*   allocator;
-  const char*             tag;            ///< Why make this hashmap
+  const char*            tag;            ///< Why make this hashmap
 } JustHashMap;
 
 /**

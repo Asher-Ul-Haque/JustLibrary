@@ -76,12 +76,11 @@ static JustTestResult testHashMapSetAndGet(void)
   JUST_EXPECT_TO_BE((size_t)2, justHashmapSize(&map));
 
   // Retrieve values via macro
-  int64_t* retrieved1 = JUST_HASHMAP_GET(&map, int64_t, &key1);
-  int64_t* retrieved2 = JUST_HASHMAP_GET(&map, int64_t, &key2);
-  JUST_EXPECT_TO_BE_NOT_NULL(retrieved1);
-  JUST_EXPECT_TO_BE_NOT_NULL(retrieved2);
-  JUST_EXPECT_TO_BE((int64_t)1000, *retrieved1);
-  JUST_EXPECT_TO_BE((int64_t)2000, *retrieved2);
+  int64_t errorVal   = -1;
+  int64_t retrieved1 = JUST_HASHMAP_GET_OR_DEFAULT(&map, int64_t, key1, errorVal);
+  int64_t retrieved2 = JUST_HASHMAP_GET_OR_DEFAULT(&map, int64_t, key2, errorVal);
+  JUST_EXPECT_TO_BE((int64_t)1000, retrieved1);
+  JUST_EXPECT_TO_BE((int64_t)2000, retrieved2);
 
   // Missing key lookup
   int32_t missingKey = 999;
@@ -94,9 +93,8 @@ static JustTestResult testHashMapSetAndGet(void)
   JUST_EXPECT_TO_BE_TRUE(okUpdate);
   JUST_EXPECT_TO_BE((size_t)2, justHashmapSize(&map)); // Size must stay identical
 
-  int64_t* retrievedUpdated = JUST_HASHMAP_GET(&map, int64_t, &key1);
-  JUST_EXPECT_TO_BE_NOT_NULL(retrievedUpdated);
-  JUST_EXPECT_TO_BE((int64_t)5555, *retrievedUpdated);
+  int64_t retrievedUpdated = JUST_HASHMAP_GET_OR_DEFAULT(&map, int64_t, key1, errorVal);
+  JUST_EXPECT_TO_BE((int64_t)5555, retrievedUpdated);
 
   justHashmapDestroy(&map);
   justMemorySetLimit(0, tag);
@@ -145,7 +143,7 @@ static JustTestResult testHashMapRemoveAndRecycle(void)
   bool reinsert = justHashmapSet(&map, &k2, &v2New);
   JUST_EXPECT_TO_BE_TRUE(reinsert);
   JUST_EXPECT_TO_BE((size_t)3, justHashmapSize(&map));
-  JUST_EXPECT_TO_BE((int32_t)200, *JUST_HASHMAP_GET(&map, int32_t, &k2));
+  JUST_EXPECT_TO_BE((int32_t)200, JUST_HASHMAP_GET_OR_DEFAULT(&map, int32_t, k2, -1));
 
   // Clear map
   justHashmapClear(&map);
@@ -193,9 +191,8 @@ static JustTestResult testHashMapCollisions(void)
   // Verify all elements can be looked up through the linear probe chain
   for (int32_t i = 0; i < 6; ++i)
   {
-    int32_t* val = JUST_HASHMAP_GET(&map, int32_t, &i);
-    JUST_EXPECT_TO_BE_NOT_NULL(val);
-    JUST_EXPECT_TO_BE((int32_t)(i * 11), *val);
+    int32_t val = JUST_HASHMAP_GET(&map, int32_t, i);
+    JUST_EXPECT_TO_BE((int32_t)(i * 11), val);
   }
 
   // Remove key 2 from middle of collision probe chain
@@ -205,9 +202,8 @@ static JustTestResult testHashMapCollisions(void)
 
   // Keys probed after the tombstone must still be found
   int32_t laterKey = 4;
-  int32_t* laterVal = JUST_HASHMAP_GET(&map, int32_t, &laterKey);
-  JUST_EXPECT_TO_BE_NOT_NULL(laterVal);
-  JUST_EXPECT_TO_BE((int32_t)44, *laterVal);
+  int32_t laterVal = JUST_HASHMAP_GET(&map, int32_t, laterKey);
+  JUST_EXPECT_TO_BE((int32_t)44, laterVal);
 
   justHashmapDestroy(&map);
   justMemorySetLimit(0, tag);
@@ -236,9 +232,8 @@ static JustTestResult testHashMapRehashResize(void)
   // Ensure all 40 items survived across multiple rehashes
   for (uint32_t i = 0; i < 40; ++i)
   {
-    uint32_t* val = JUST_HASHMAP_GET(&map, uint32_t, &i);
-    JUST_EXPECT_TO_BE_NOT_NULL(val);
-    JUST_EXPECT_TO_BE((uint32_t)(i * 100), *val);
+    uint32_t val = JUST_HASHMAP_GET(&map, uint32_t, i);
+    JUST_EXPECT_TO_BE((uint32_t)(i * 100), val);
   }
 
   justHashmapDestroy(&map);

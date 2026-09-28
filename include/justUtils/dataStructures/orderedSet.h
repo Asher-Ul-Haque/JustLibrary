@@ -61,19 +61,19 @@ typedef struct justAVLNode
 {
   struct justAVLNode*          left;   ///< Left child
   struct justAVLNode*          right;  ///< Right child
-  int32_t                       height; ///< height of th etree
-  alignas(max_align_t) uint8_t  data[]; ///< data as an array, to ensure that it is on the same memory location as the entire struct, that data* does not give me
+  int32_t                      height; ///< height of th etree
+  alignas(max_align_t) uint8_t data[]; ///< data as an array, to ensure that it is on the same memory location as the entire struct, that data* does not give me
 } JustAVLNode;
 
 /// @brief : Structure of an AVL Trree, the view of the entire tree
 typedef struct justAVLTree
 {
-  JustAVLNode*         root;         ///< The root node
+  JustAVLNode*          root;         ///< The root node
   size_t                size;         ///< How many nodes
   size_t                elementSize;  ///< How big is an element in bytes
-  justCompareFunc      compare;      ///< Compare function
+  justCompareFunc       compare;      ///< Compare function
   const char*           tag;          ///< Why was this tree created
-  JustLinearAllocator* allocator;    ///< Optional linear allocator
+  JustLinearAllocator*  allocator;    ///< Optional linear allocator
 } JustAVLTree;
 
 typedef JustAVLTree OrderedSet;

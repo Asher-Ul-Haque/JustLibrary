@@ -63,9 +63,9 @@ typedef struct justDynamicArray
  * @return true if initialized successfully, false otherwise
 */
 JUST_API bool justDynamicArrayCreate(
-  JustDynamicArray*    DARRAY, 
-  size_t               INITIAL_CAPACITY, 
-  size_t               ELEMENT_SIZE, 
+  JustDynamicArray*    DARRAY,
+  size_t               INITIAL_CAPACITY,
+  size_t               ELEMENT_SIZE,
   JustLinearAllocator* ALLOCATOR,
   const char*          TAG);
 
