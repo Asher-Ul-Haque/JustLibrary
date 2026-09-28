@@ -1125,23 +1125,53 @@ JUST_API size_t justMemoryGetActiveBytes(const char* TAG)
 
 JUST_API void justMemoryLogUsage(bool VERBOSE)
 {
+  static const char*  units[]   = { "Bytes", "KiB", "MiB", "GiB", "TiB", "PiB" };
+  const size_t        maxUnits  = sizeof(units) / sizeof(units[0]);
+
   JUST_LOG_INFO("[MEMORY TRACKER] : Registered Memory Subsystems (%zu tags):", registeredTagCount);
+
   for (size_t i = 0; i < registeredTagCount; ++i)
   {
     justTagEntry* e = &memoryTags[i];
+
+    // - - - Format allocatedBytes
+    char    allocBuf[32];
+    double  allocVal  = (double)e->allocatedBytes;
+    size_t  allocUnit = 0;
+    while (allocVal >= 1024.0 && allocUnit < maxUnits - 1)
+    {
+      allocVal /= 1024.0;
+      allocUnit++;
+    }
+    if (allocUnit == 0)   snprintf(allocBuf, sizeof(allocBuf), "%zu %s", e->allocatedBytes, units[allocUnit]);
+    else                  snprintf(allocBuf, sizeof(allocBuf), "%.2f %s", allocVal, units[allocUnit]);
+
+    // - - - Format allocationLimit
     if (e->allocationLimit > 0)
     {
+      char    limitBuf[32];
+      double  limitVal  = (double)e->allocationLimit;
+      size_t  limitUnit = 0;
+
+      while (limitVal >= 1024.0 && limitUnit < maxUnits - 1)
+      {
+        limitVal /= 1024.0;
+        limitUnit++;
+      }
+      if (limitUnit == 0) snprintf(limitBuf, sizeof(limitBuf), "%zu %s", e->allocationLimit, units[limitUnit]);
+      else                snprintf(limitBuf, sizeof(limitBuf), "%.2f %s", limitVal, units[limitUnit]);
+
       double pct = (double)e->allocatedBytes / (double)e->allocationLimit * 100.0;
-      JUST_LOG_INFO("  ├── Tag: %-16s | %zu / %zu bytes (%.1f%%) [%zu active]",
-                     e->name, e->allocatedBytes, e->allocationLimit, pct, e->activeCount);
+      JUST_LOG_INFO("  ├── Tag: %-16s | %s / %s (%.1f%%) [%zu active]",
+                    e->name, allocBuf, limitBuf, pct, e->activeCount);
       #ifndef DEBUG
-        (void) pct;
+          (void)pct;
       #endif
     }
     else
     {
-      JUST_LOG_INFO("  ├── Tag: %-16s | %zu bytes (unlimited) [%zu active]",
-                     e->name, e->allocatedBytes, e->activeCount);
+      JUST_LOG_INFO("  ├── Tag: %-16s | %s (unlimited) [%zu active]",
+                    e->name, allocBuf, e->activeCount);
     }
 
     if (VERBOSE && e->activeCount > 0)
@@ -1151,8 +1181,20 @@ JUST_API void justMemoryLogUsage(bool VERBOSE)
       {
         if (curr->tag == e->name || strcmp(curr->tag, e->name) == 0)
         {
-          JUST_LOG_DEBUG("  │   └── %zu bytes at %s:%d (%s)",
-                          curr->requestedSize, curr->file, curr->line, curr->func);
+          char    reqBuf[32];
+          double  reqVal  = (double)curr->requestedSize;
+          size_t  reqUnit = 0;
+
+          while (reqVal >= 1024.0 && reqUnit < maxUnits - 1)
+          {
+            reqVal /= 1024.0;
+            reqUnit++;
+          }
+          if (reqUnit == 0)    snprintf(reqBuf, sizeof(reqBuf), "%zu %s", curr->requestedSize, units[reqUnit]);
+          else                 snprintf(reqBuf, sizeof(reqBuf), "%.2f %s", reqVal, units[reqUnit]);
+
+          JUST_LOG_DEBUG("  │   └── %s at %s:%d (%s)",
+                         reqBuf, curr->file, curr->line, curr->func);
         }
         curr = curr->next;
       }
