@@ -78,7 +78,7 @@ typedef struct justHashMap
   justHashFunction       hashFunction;
   justKeyCompareFunction compareFunction;
   JustLinearAllocator*   allocator;
-  const char*            tag;            ///< Why make this hashmap
+  char                   tag[32];        ///< Why make this hashmap
 } JustHashMap;
 
 /**

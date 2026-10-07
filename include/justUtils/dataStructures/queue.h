@@ -50,8 +50,8 @@ typedef struct justQueue
   size_t                head;         ///< Index of oldest element
   size_t                tail;         ///< Next write index
   size_t                elementSize;  ///< sizeof(T)
-  const char*           tag;          ///< WHy create this queue
   JustLinearAllocator*  allocator;    ///< Optional linear allocator, NULL for system heap
+  char                  tag[32];      ///< WHy create this queue
 } JustQueue;
 
 /**

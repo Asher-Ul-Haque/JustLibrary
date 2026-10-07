@@ -19,7 +19,7 @@
 /// @brief : Tag Entry, how much per tag
 typedef struct justTagEntry
 {
-  const char* name;
+  char        name[32];       ///< 32 bit tag
   size_t      allocatedBytes;
   size_t      allocationLimit;
   size_t      activeCount;
@@ -33,15 +33,15 @@ typedef struct justMemoryHeader
   const char*                 file;
   const char*                 func;
   const char*                 tag;
-  struct justMemoryHeader*   next;
-  struct justMemoryHeader*   prev;
+  struct justMemoryHeader*    next;
+  struct justMemoryHeader*    prev;
   uint32_t                    magic;
   int32_t                     line;
 } justMemHeader;
 
 // - - - Doubly linked list tracking all active allocations
-static justMemHeader*  activeAllocations                   = NULL;
-static size_t          registeredTagCount                  = 1;
+static justMemHeader*  activeAllocations                  = NULL;
+static size_t          registeredTagCount                 = 1;
 static justTagEntry    memoryTags[JUST_MEMORY_TAG_LIMIT]  =
   {
     [0] =
@@ -72,8 +72,16 @@ static justTagEntry* getOrCreateTag(const char* TAG)
 
   if (registeredTagCount < JUST_MEMORY_TAG_LIMIT)
   {
-    justTagEntry* entry    = &memoryTags[registeredTagCount++];
-    entry->name             = TAG;
+    justTagEntry* entry  = &memoryTags[registeredTagCount++];
+
+    size_t        tagLen = strlen(TAG);
+    if (tagLen >= sizeof(entry->name))
+    {
+      JUST_LOG_WARNING("[MEMORY TRACKER] : Tag '%s' length (%zu) exceeds max tag name length (%zu)! Truncating tag.",
+                        TAG, tagLen, sizeof(entry->name) - 1);
+    }
+    snprintf(entry->name, sizeof(entry->name), "%s", TAG);
+
     entry->allocatedBytes   = 0;
     entry->allocationLimit  = JUST_MEMORY_ALLOC_DEFAULT_LIMIT;
     entry->activeCount      = 0;

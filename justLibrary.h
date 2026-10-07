@@ -632,7 +632,9 @@ JUST_API _Noreturn void reportTODO(const char* COMMENT, const char* FILE, const 
  * @brief : Overwrites of malloc, realloc and free to have memory tracking in debug mode, with tagging and allocation limits
 */
 
+#pragma once 
 
+#include <justUtils/defines.h>
 #include <stddef.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -657,6 +659,7 @@ extern "C" {
  * @param FUNCTION : Which function is it allocated in
  * @param LINE : Which line is it allocated in
  * @param TAG : Why are you allocating
+ * @warning : TAG is a char[32]
  */
 void* justTrackedMalloc(
   size_t      SIZE,
@@ -689,6 +692,7 @@ JUST_API void* justTrackedRealloc(
  * @param FUNCTION : What function is the callocate in 
  * @param LINE : What line is the callocate in
  * @param TAG : Why are you allocating
+ * @warning : TAG is a char[32]
  */
 JUST_API void* justTrackedCalloc(
   size_t      COUNT,
@@ -723,6 +727,7 @@ JUST_API void justMemoryReportLeaks(void);
 /**
  * @brief : Returns total active allocated bytes currently in use.
  * @param TAG : The tag for which you want to check memory, set it to MEMORY_TAG_COUNT to get all
+ * @warning : TAG is a char[32]
  * @return : total active allocated bytes in use
  */
 JUST_API size_t justMemoryGetActiveBytes(const char* TAG);
@@ -741,6 +746,7 @@ JUST_API void justMemoryLogUsage(bool VERBOSE);
  * @warning : TAG must be valid
  * @param LIMIT : The limit you want to set in bytes
  * @param TAG : What do you want to set the limit for
+ * @warning : TAG is a char[32]
 */
 JUST_API void justMemorySetLimit(size_t LIMIT, const char* TAG);
 
@@ -790,7 +796,7 @@ JUST_API size_t justMemoryGetLimit(const char* TAG);
 /// @brief : Tag Entry, how much per tag
 typedef struct justTagEntry
 {
-  const char* name;
+  char        name[32];       ///< 32 bit tag
   size_t      allocatedBytes;
   size_t      allocationLimit;
   size_t      activeCount;
@@ -843,8 +849,16 @@ static justTagEntry* getOrCreateTag(const char* TAG)
 
   if (registeredTagCount < JUST_MEMORY_TAG_LIMIT)
   {
-    justTagEntry* entry    = &memoryTags[registeredTagCount++];
-    entry->name             = TAG;
+    justTagEntry* entry  = &memoryTags[registeredTagCount++];
+
+    size_t        tagLen = strlen(TAG);
+    if (tagLen >= sizeof(entry->name))
+    {
+      JUST_LOG_WARNING("[MEMORY TRACKER] : Tag '%s' length (%zu) exceeds max tag name length (%zu)! Truncating tag.",
+                        TAG, tagLen, sizeof(entry->name) - 1);
+    }
+    snprintf(entry->name, sizeof(entry->name), "%s", TAG);
+
     entry->allocatedBytes   = 0;
     entry->allocationLimit  = JUST_MEMORY_ALLOC_DEFAULT_LIMIT;
     entry->activeCount      = 0;
@@ -2196,8 +2210,8 @@ typedef struct justDynamicArray
   size_t                  capacity;     ///< Total number of elements allocated
   size_t                  size;         ///< Current number of elements stored
   size_t                  elementSize;  ///< Size of an individual element in bytes
-  const char*             tag;          ///< Why are you creating this
   JustLinearAllocator*    allocator;    ///< Optional custom linear allocator, NULL for the vector to manage its own memory
+  char                    tag[32];      ///< Why are you creating this (char[32])
 } JustDynamicArray;
 
 
@@ -2209,6 +2223,7 @@ typedef struct justDynamicArray
  * @param INITIAL_CAPACITY : Initial element capacity (0 defaults to 8)
  * @param ELEMENT_SIZE : Size of each element in bytes 
  * @param ALLOCATOR : Pointer to linear allocator or NULL for the dynamic array to allocate memory on its own 
+ * @warning : TAG is a char[32]
  * @return true if initialized successfully, false otherwise
 */
 JUST_API bool justDynamicArrayCreate(
@@ -2422,15 +2437,16 @@ JUST_API bool justDynamicArrayShrinkToFit(JustDynamicArray* DARRAY);
 
 #include <stdalign.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 bool justDynamicArrayCreate(
   JustDynamicArray*    DARRAY,
-  size_t                INITIAL_CAPACITY,
-  size_t                ELEMENT_SIZE,
+  size_t               INITIAL_CAPACITY,
+  size_t               ELEMENT_SIZE,
   JustLinearAllocator* ALLOCATOR,
-  const char*           TAG)
+  const char*          TAG)
 {
   JUST_ASSERT_DEBUG_MESSAGE(DARRAY != NULL, "[DYNAMIC DARRAY] : Cannot create a NULL DARRAY");
   JUST_ASSERT_DEBUG_MESSAGE(ELEMENT_SIZE > 0, "[DYNAMIC DARRAY] : Element size must be greater than 0");
@@ -2440,7 +2456,7 @@ bool justDynamicArrayCreate(
   DARRAY->size          = 0;
   DARRAY->capacity      = INITIAL_CAPACITY;
   DARRAY->allocator     = ALLOCATOR;
-  DARRAY->tag           = TAG;
+  snprintf(DARRAY->tag, sizeof(DARRAY->tag), "%s", TAG);
 
   size_t totalBytes = DARRAY->capacity * DARRAY->elementSize;
 
@@ -2803,8 +2819,8 @@ typedef struct justQueue
   size_t                head;         ///< Index of oldest element
   size_t                tail;         ///< Next write index
   size_t                elementSize;  ///< sizeof(T)
-  const char*           tag;          ///< WHy create this queue
   JustLinearAllocator*  allocator;    ///< Optional linear allocator, NULL for system heap
+  char                  tag[32];      ///< WHy create this queue
 } JustQueue;
 
 /**
@@ -3008,6 +3024,7 @@ JUST_API static inline bool justQueueShrinkToFit(JustQueue* QUEUE)
 
 #include <stdint.h>
 #include <string.h>
+#include <stdio.h>
 
 static inline size_t justQueueRoundToPowerOfTwo(size_t n)
 {
@@ -3042,9 +3059,9 @@ JUST_API bool justQueueCreate(
   QUEUE->capacity     = justQueueRoundToPowerOfTwo(INITIAL_CAPACITY);
   QUEUE->elementSize  = ELEMENT_SIZE;
   QUEUE->mask         = QUEUE->capacity - 1;
-  QUEUE->tag          = TAG,
   QUEUE->allocator    = ALLOCATOR;
   QUEUE->data         = NULL;
+  snprintf(QUEUE->tag, sizeof(QUEUE->tag), "%s", TAG);
 
   if (QUEUE->capacity > 0)
   {
@@ -3192,8 +3209,8 @@ typedef struct justRingBuffer
   size_t                tail;           ///< Next read index
   size_t                count;          ///< Active item count
   bool                  allowOverwrite; ///< Overwrite oldest item when full
-  const char*           tag;            ///< Memory tracking tag
-  JustLinearAllocator* allocator;      ///< Optional linear allocator (NULL for heap)
+  JustLinearAllocator*  allocator;      ///< Optional linear allocator (NULL for heap)
+  char                  tag[32];        ///< Why allocating this
 } JustRingBuffer;
 
 /**
@@ -3395,6 +3412,7 @@ JUST_API static inline size_t justRingBufferCapacity(const JustRingBuffer* RING)
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 static inline size_t justRingNextPowerOfTwo(size_t NUM)
 {
@@ -3432,7 +3450,7 @@ JUST_API bool justRingBufferCreate(
   RING->count          = 0;
   RING->allowOverwrite = ALLOW_OVERWRITE;
   RING->allocator      = ALLOCATOR;
-  RING->tag            = TAG;
+  snprintf(RING->tag, sizeof(RING->tag), "%s", TAG);
 
   size_t totalBytes = RING->capacity * RING->elementSize;
 
@@ -3519,19 +3537,19 @@ typedef struct justAVLNode
 {
   struct justAVLNode*          left;   ///< Left child
   struct justAVLNode*          right;  ///< Right child
-  int32_t                       height; ///< height of th etree
-  alignas(max_align_t) uint8_t  data[]; ///< data as an array, to ensure that it is on the same memory location as the entire struct, that data* does not give me
+  int32_t                      height; ///< height of th etree
+  alignas(max_align_t) uint8_t data[]; ///< data as an array, to ensure that it is on the same memory location as the entire struct, that data* does not give me
 } JustAVLNode;
 
 /// @brief : Structure of an AVL Trree, the view of the entire tree
 typedef struct justAVLTree
 {
-  JustAVLNode*         root;         ///< The root node
+  JustAVLNode*          root;         ///< The root node
   size_t                size;         ///< How many nodes
   size_t                elementSize;  ///< How big is an element in bytes
-  justCompareFunc      compare;      ///< Compare function
-  const char*           tag;          ///< Why was this tree created
-  JustLinearAllocator* allocator;    ///< Optional linear allocator
+  justCompareFunc       compare;      ///< Compare function
+  JustLinearAllocator*  allocator;    ///< Optional linear allocator
+  char                  tag[32];      ///< Why was this tree created
 } JustAVLTree;
 
 typedef JustAVLTree OrderedSet;
@@ -3669,6 +3687,7 @@ JUST_API static inline bool justOrderedSetIsEmpty(const JustAVLTree* TREE)
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 static int32_t defaultMemcmp(const void* A, const void* B, size_t SIZE)
 {
@@ -3916,7 +3935,7 @@ JUST_API bool justOrderedSetCreate(
   TREE->elementSize = ELEMENT_SIZE;
   TREE->compare     = COMPARATOR ? COMPARATOR : defaultMemcmp;
   TREE->allocator   = ALLOCATOR;
-  TREE->tag         = TAG;
+  snprintf(TREE->tag, sizeof(TREE->tag), "%s", TAG);
 
   return true;
 }
@@ -4057,7 +4076,7 @@ typedef struct justHashMap
   justHashFunction       hashFunction;
   justKeyCompareFunction compareFunction;
   JustLinearAllocator*   allocator;
-  const char*            tag;            ///< Why make this hashmap
+  char                   tag[32];        ///< Why make this hashmap
 } JustHashMap;
 
 /**
@@ -4194,6 +4213,7 @@ JUST_API static inline bool justHashmapIsEmpty(const JustHashMap* MAP)
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 // Slot header: hash + state
 typedef struct justSlotHeader
@@ -4288,7 +4308,7 @@ JUST_API bool justHashmapCreate(
   MAP->hashFunction     = HASHER ? HASHER : defaultFastHash;
   MAP->compareFunction  = COMPARATOR ? COMPARATOR : defaultComparator;
   MAP->allocator        = ALLOCATOR;
-  MAP->tag              = TAG;
+  snprintf(MAP->tag, sizeof(MAP->tag), "%s", TAG);
 
   // - - - Interleaved slot layout: [Header] [Key] [Pad] [Value] [Pad]
   MAP->keyOffset    = sizeof(justSlotHeader);

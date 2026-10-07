@@ -52,6 +52,7 @@ extern "C" {
  * @param FUNCTION : Which function is it allocated in
  * @param LINE : Which line is it allocated in
  * @param TAG : Why are you allocating
+ * @warning : TAG is a char[32]
  */
 void* justTrackedMalloc(
   size_t      SIZE,
@@ -84,6 +85,7 @@ JUST_API void* justTrackedRealloc(
  * @param FUNCTION : What function is the callocate in 
  * @param LINE : What line is the callocate in
  * @param TAG : Why are you allocating
+ * @warning : TAG is a char[32]
  */
 JUST_API void* justTrackedCalloc(
   size_t      COUNT,
@@ -118,6 +120,7 @@ JUST_API void justMemoryReportLeaks(void);
 /**
  * @brief : Returns total active allocated bytes currently in use.
  * @param TAG : The tag for which you want to check memory, set it to MEMORY_TAG_COUNT to get all
+ * @warning : TAG is a char[32]
  * @return : total active allocated bytes in use
  */
 JUST_API size_t justMemoryGetActiveBytes(const char* TAG);
@@ -136,6 +139,7 @@ JUST_API void justMemoryLogUsage(bool VERBOSE);
  * @warning : TAG must be valid
  * @param LIMIT : The limit you want to set in bytes
  * @param TAG : What do you want to set the limit for
+ * @warning : TAG is a char[32]
 */
 JUST_API void justMemorySetLimit(size_t LIMIT, const char* TAG);
 

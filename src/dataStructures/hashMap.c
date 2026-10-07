@@ -2,6 +2,7 @@
 #include <justUtils/memory/tracker.h>
 #include <justUtils/core/logger.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -98,7 +99,7 @@ JUST_API bool justHashmapCreate(
   MAP->hashFunction     = HASHER ? HASHER : defaultFastHash;
   MAP->compareFunction  = COMPARATOR ? COMPARATOR : defaultComparator;
   MAP->allocator        = ALLOCATOR;
-  MAP->tag              = TAG;
+  snprintf(MAP->tag, sizeof(MAP->tag), "%s", TAG);
 
   // - - - Interleaved slot layout: [Header] [Key] [Pad] [Value] [Pad]
   MAP->keyOffset    = sizeof(justSlotHeader);

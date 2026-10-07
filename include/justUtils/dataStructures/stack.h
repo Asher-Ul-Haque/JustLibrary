@@ -53,10 +53,10 @@ typedef struct justStack
 */
 JUST_API static inline bool justStackCreate(
   JustStack*           STACK,
-  size_t                INITIAL_CAPACITY,
-  size_t                ELEMENT_SIZE,
+  size_t               INITIAL_CAPACITY,
+  size_t               ELEMENT_SIZE,
   JustLinearAllocator* ALLOCATOR,
-  const char*           TAG)
+  const char*          TAG)
 {
   JUST_ASSERT_DEBUG_MESSAGE(STACK != NULL, "[STACK] : Cannot create a NULL STACK");
   JUST_ASSERT_DEBUG_MESSAGE(ELEMENT_SIZE > 0, "[STACK] : Element size must be greater than 0");

@@ -5,6 +5,7 @@
 #include <justUtils/core/logger.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 static int32_t defaultMemcmp(const void* A, const void* B, size_t SIZE)
 {
@@ -252,7 +253,7 @@ JUST_API bool justOrderedSetCreate(
   TREE->elementSize = ELEMENT_SIZE;
   TREE->compare     = COMPARATOR ? COMPARATOR : defaultMemcmp;
   TREE->allocator   = ALLOCATOR;
-  TREE->tag         = TAG;
+  snprintf(TREE->tag, sizeof(TREE->tag), "%s", TAG);
 
   return true;
 }

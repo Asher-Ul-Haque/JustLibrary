@@ -3,6 +3,7 @@
 #include <justUtils/dataStructures/dynamicArray.h>
 #include <stdalign.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -21,7 +22,7 @@ bool justDynamicArrayCreate(
   DARRAY->size          = 0;
   DARRAY->capacity      = INITIAL_CAPACITY;
   DARRAY->allocator     = ALLOCATOR;
-  DARRAY->tag           = TAG;
+  snprintf(DARRAY->tag, sizeof(DARRAY->tag), "%s", TAG);
 
   size_t totalBytes = DARRAY->capacity * DARRAY->elementSize;
 

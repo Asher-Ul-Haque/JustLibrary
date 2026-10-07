@@ -5,6 +5,7 @@
 #include <justUtils/core/asserts.h>
 #include <stdint.h>
 #include <string.h>
+#include <stdio.h>
 
 static inline size_t justQueueRoundToPowerOfTwo(size_t n)
 {
@@ -39,9 +40,9 @@ JUST_API bool justQueueCreate(
   QUEUE->capacity     = justQueueRoundToPowerOfTwo(INITIAL_CAPACITY);
   QUEUE->elementSize  = ELEMENT_SIZE;
   QUEUE->mask         = QUEUE->capacity - 1;
-  QUEUE->tag          = TAG,
   QUEUE->allocator    = ALLOCATOR;
   QUEUE->data         = NULL;
+  snprintf(QUEUE->tag, sizeof(QUEUE->tag), "%s", TAG);
 
   if (QUEUE->capacity > 0)
   {

@@ -52,8 +52,8 @@ typedef struct justRingBuffer
   size_t                tail;           ///< Next read index
   size_t                count;          ///< Active item count
   bool                  allowOverwrite; ///< Overwrite oldest item when full
-  const char*           tag;            ///< Memory tracking tag
-  JustLinearAllocator* allocator;      ///< Optional linear allocator (NULL for heap)
+  JustLinearAllocator*  allocator;      ///< Optional linear allocator (NULL for heap)
+  char                  tag[32];        ///< Why are you allocating this
 } JustRingBuffer;
 
 /**

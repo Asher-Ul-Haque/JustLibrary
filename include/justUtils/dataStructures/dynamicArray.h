@@ -47,8 +47,8 @@ typedef struct justDynamicArray
   size_t                  capacity;     ///< Total number of elements allocated
   size_t                  size;         ///< Current number of elements stored
   size_t                  elementSize;  ///< Size of an individual element in bytes
-  const char*             tag;          ///< Why are you creating this
   JustLinearAllocator*    allocator;    ///< Optional custom linear allocator, NULL for the vector to manage its own memory
+  char                    tag[32];      ///< Why are you creating this (char[32])
 } JustDynamicArray;
 
 
@@ -60,6 +60,7 @@ typedef struct justDynamicArray
  * @param INITIAL_CAPACITY : Initial element capacity (0 defaults to 8)
  * @param ELEMENT_SIZE : Size of each element in bytes 
  * @param ALLOCATOR : Pointer to linear allocator or NULL for the dynamic array to allocate memory on its own 
+ * @warning : TAG is a char[32]
  * @return true if initialized successfully, false otherwise
 */
 JUST_API bool justDynamicArrayCreate(

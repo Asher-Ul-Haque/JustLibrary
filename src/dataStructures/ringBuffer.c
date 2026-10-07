@@ -4,6 +4,7 @@
 #include <justUtils/core/logger.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 static inline size_t justRingNextPowerOfTwo(size_t NUM)
 {
@@ -41,7 +42,7 @@ JUST_API bool justRingBufferCreate(
   RING->count          = 0;
   RING->allowOverwrite = ALLOW_OVERWRITE;
   RING->allocator      = ALLOCATOR;
-  RING->tag            = TAG;
+  snprintf(RING->tag, sizeof(RING->tag), "%s", TAG);
 
   size_t totalBytes = RING->capacity * RING->elementSize;
 
