@@ -634,7 +634,6 @@ JUST_API _Noreturn void reportTODO(const char* COMMENT, const char* FILE, const 
 
 #pragma once 
 
-#include <justUtils/defines.h>
 #include <stddef.h>
 #include <stdbool.h>
 #include <stdint.h>
